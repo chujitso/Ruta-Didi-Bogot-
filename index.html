@@ -1,0 +1,374 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Estrategia DiDi Repartidor Bici (7 AM - 11 AM) - Bogotá</title>
+  
+  <!-- Leaflet CSS (Mapa Interactivo) -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+
+  <style>
+    :root {
+      --primary: #ff5200; /* Color corporativo DiDi */
+      --dark: #0f172a;
+      --light: #f8fafc;
+      
+      /* Semaforización de Importancia */
+      --prioridad-alta: #16a34a;    /* Verde */
+      --prioridad-media: #eab308;   /* Amarillo */
+      --prioridad-baja: #dc2626;    /* Rojo */
+    }
+
+    body {
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      line-height: 1.5;
+      color: var(--dark);
+      background-color: #f1f5f9;
+      margin: 0;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #ffffff;
+      padding: 25px 30px;
+      border-radius: 16px;
+      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    }
+
+    header {
+      border-bottom: 3px solid var(--primary);
+      padding-bottom: 12px;
+      margin-bottom: 20px;
+    }
+
+    h1 {
+      color: var(--dark);
+      margin: 0 0 4px 0;
+      font-size: 22px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .subtitle {
+      font-size: 13px;
+      color: #64748b;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    /* Estilos del Mapa */
+    #map-container {
+      margin-bottom: 25px;
+    }
+
+    #map {
+      height: 320px;
+      width: 100%;
+      border-radius: 12px;
+      border: 2px solid #e2e8f0;
+      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
+    }
+
+    /* Leyenda */
+    .leyenda {
+      display: flex;
+      gap: 15px;
+      margin-top: 10px;
+      justify-content: center;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    .item-leyenda {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .dot {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .dot-alta { background-color: var(--prioridad-alta); }
+    .dot-media { background-color: var(--prioridad-media); }
+    .dot-baja { background-color: var(--prioridad-baja); }
+
+    /* Grilla de Zonas Interactivas */
+    .grid-zonas {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 15px;
+      margin-bottom: 25px;
+    }
+
+    .card-zona {
+      border: 1px solid #e2e8f0;
+      border-radius: 10px;
+      padding: 14px;
+      background: #ffffff;
+      transition: all 0.2s ease;
+      cursor: pointer;
+      position: relative;
+    }
+
+    .card-zona:hover {
+      transform: translateY(-3px);
+      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    }
+
+    /* Bordes e insignias según importancia */
+    .card-alta { border-left: 6px solid var(--prioridad-alta); }
+    .card-media { border-left: 6px solid var(--prioridad-media); }
+    .card-baja { border-left: 6px solid var(--prioridad-baja); }
+
+    .badge {
+      display: inline-block;
+      font-size: 10px;
+      padding: 2px 8px;
+      border-radius: 12px;
+      font-weight: bold;
+      color: white;
+      margin-bottom: 6px;
+      text-transform: uppercase;
+    }
+
+    .badge-alta { background-color: var(--prioridad-alta); }
+    .badge-media { background-color: var(--prioridad-media); color: #000; }
+    .badge-baja { background-color: var(--prioridad-baja); }
+
+    .card-zona h3 {
+      margin: 0 0 6px 0;
+      color: var(--dark);
+      font-size: 15px;
+    }
+
+    ul {
+      margin: 0;
+      padding-left: 16px;
+      font-size: 12px;
+      color: #334155;
+    }
+
+    li { margin-bottom: 3px; }
+
+    .section-title {
+      font-size: 16px;
+      color: var(--dark);
+      border-bottom: 1px solid #e2e8f0;
+      padding-bottom: 4px;
+      margin-top: 20px;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    /* Tabla */
+    .table-horarios {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 12px;
+      margin-bottom: 20px;
+    }
+
+    .table-horarios th, .table-horarios td {
+      border: 1px solid #e2e8f0;
+      padding: 8px 12px;
+      text-align: left;
+    }
+
+    .table-horarios th {
+      background-color: #f8fafc;
+      color: var(--dark);
+    }
+
+    .tips-box {
+      background-color: #f0f9ff;
+      border-left: 4px solid #0284c7;
+      padding: 10px 14px;
+      border-radius: 6px;
+      font-size: 12px;
+    }
+
+    @media print {
+      body { background: white; padding: 0; }
+      .container { box-shadow: none; padding: 0; width: 100%; }
+      #map { height: 250px; }
+    }
+  </style>
+</head>
+<body>
+
+<div class="container">
+  <header>
+    <span class="subtitle">Estrategia DiDi Repartidor Bici • Horario 7:00 AM - 11:00 AM</span>
+    <h1>🚴‍♂️ Ubicaciones Más Rentables en Bogotá</h1>
+  </header>
+
+  <!-- Mapa Interactivo -->
+  <div id="map-container">
+    <div id="map"></div>
+    <div class="leyenda">
+      <span class="item-leyenda"><span class="dot dot-alta"></span> Verde: Muy Importante (Pico Alto)</span>
+      <span class="item-leyenda"><span class="dot dot-media"></span> Amarillo: Medianamente Importante</span>
+      <span class="item-leyenda"><span class="dot dot-baja"></span> Rojo: Menor Importancia (Franja 7-11 AM)</span>
+    </div>
+  </div>
+
+  <h2 class="section-title">📍 Zonas Estratégicas y Puntos de Espera</h2>
+  
+  <div class="grid-zonas">
+    
+    <!-- 1. Chapinero (Muy Importante - Verde) -->
+    <div class="card-zona card-alta" onclick="centrarMapa(4.654, -74.055, 15)">
+      <span class="badge badge-alta">🟢 Muy Importante</span>
+      <h3>1. Chapinero Financiero (Cl. 72)</h3>
+      <ul>
+        <li><strong>Estrategia 7-8:30 AM:</strong> Pico de oficinas y personas en movimiento.</li>
+        <li><strong>Punto Clave:</strong> Cl. 72 con Kr. 9 a Kr. 11 (Cruz Verde / Farmatodo).</li>
+        <li><strong>Ventaja:</strong> Pedidos urgentes de distancias muy cortas.</li>
+      </ul>
+    </div>
+
+    <!-- 2. Chicó (Medianamente Importante - Amarillo) -->
+    <div class="card-zona card-media" onclick="centrarMapa(4.685, -74.048, 15)">
+      <span class="badge badge-media">🟡 Mediana Importancia</span>
+      <h3>2. Chicó & Pepe Sierra</h3>
+      <ul>
+        <li><strong>Estrategia 8:30-11 AM:</strong> Comienzo de demanda residencial.</li>
+        <li><strong>Punto Clave:</strong> Corredor Kr. 15 (Cl. 93 a Cl. 116).</li>
+        <li><strong>Ventaja:</strong> Ciclorrutas continuas por Kr. 19 y Cl. 100.</li>
+      </ul>
+    </div>
+
+    <!-- 3. Ciudad Salitre (Medianamente Importante - Amarillo) -->
+    <div class="card-zona card-media" onclick="centrarMapa(4.652, -74.108, 15)">
+      <span class="badge badge-media">🟡 Mediana Importancia</span>
+      <h3>3. Ciudad Salitre Oriental</h3>
+      <ul>
+        <li><strong>Estrategia 7-10 AM:</strong> Mezcla de residentes y torres corporativas.</li>
+        <li><strong>Punto Clave:</strong> Salitre Plaza / Av. Esperanza / Cruz Verde 24h.</li>
+        <li><strong>Ventaja:</strong> Terreno 100% plano y ciclorruta Av. Calle 26.</li>
+      </ul>
+    </div>
+
+    <!-- 4. Cedritos (Menor Importancia - Rojo) -->
+    <div class="card-zona card-baja" onclick="centrarMapa(4.721, -74.032, 15)">
+      <span class="badge badge-baja">🔴 Menor Importancia</span>
+      <h3>4. Cedritos (Calle 140)</h3>
+      <ul>
+        <li><strong>Estrategia 9-11 AM:</strong> Zona secundaria de flujo más residencial.</li>
+        <li><strong>Punto Clave:</strong> Cl. 140 entre Kr. 9 y Kr. 15.</li>
+        <li><strong>Nota:</strong> Buena densidad pero menor volumen de urgencia matutina.</li>
+      </ul>
+    </div>
+
+  </div>
+
+  <h2 class="section-title">⏰ Plan de Rotación Sugerido</h2>
+  <table class="table-horarios">
+    <thead>
+      <tr>
+        <th>Horario</th>
+        <th>Zona Prioritaria</th>
+        <th>Objetivo principal</th>
+      </tr>
+    </thead>
+    <tbody>
+      <tr>
+        <td><strong>07:00 AM – 08:30 AM</strong></td>
+        <td><strong style="color: var(--prioridad-alta);">🟢 Chapinero (Calle 72) / Salitre</strong></td>
+        <td>Capturar pedidos de ejecutivos, oficinas y urgencias matutinas.</td>
+      </tr>
+      <tr>
+        <td><strong>08:30 AM – 11:00 AM</strong></td>
+        <td><strong style="color: #b45309;">🟡 Chicó / Pepe Sierra / Cedritos</strong></td>
+        <td>Capturar compras de hogar, medicamentos formulados y cuidado personal.</td>
+      </tr>
+    </tbody>
+  </table>
+
+  <h2 class="section-title">💡 Recomendaciones Operativas</h2>
+  <div class="tips-box">
+    <ul>
+      <li><strong>Interacción con el mapa:</strong> Haz clic en cualquier tarjeta de zona para enfocar el mapa directamente en ese punto de espera.</li>
+      <li><strong>Ahorro de energía:</strong> No pedalees esperando pedidos; ubícate fijo a 1-2 cuadras de un clúster comercial (ej. Farmatodo Pepe Sierra o Cruz Verde Calle 72).</li>
+    </ul>
+  </div>
+</div>
+
+<!-- Script de Leaflet JS para el Mapa -->
+<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+<script>
+  // Inicializar mapa centrado en el norte-centro de Bogotá
+  var map = L.map('map').setView([4.675, -74.060], 12);
+
+  // Cargar capa de mapa de OpenStreetMap
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 18,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  // Función para crear iconos de colores
+  function crearIcono(colorHex) {
+    return L.divIcon({
+      className: 'custom-icon',
+      html: `<div style="background-color:${colorHex}; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.4);"></div>`,
+      iconSize: [16, 16],
+      iconAnchor: [8, 8]
+    });
+  }
+
+  // Puntos clave y marcas
+  var ubicaciones = [
+    {
+      nombre: "1. Chapinero Financiero (Cl. 72)",
+      lat: 4.654,
+      lng: -74.055,
+      color: "#16a34a", // Verde
+      popup: "<b>Chapinero (Cl. 72)</b><br>🟢 Prioridad Alta (7:00 AM - 8:30 AM)"
+    },
+    {
+      nombre: "2. Chicó / Pepe Sierra",
+      lat: 4.685,
+      lng: -74.048,
+      color: "#eab308", // Amarillo
+      popup: "<b>Chicó / Pepe Sierra</b><br>🟡 Prioridad Media (8:30 AM - 11:00 AM)"
+    },
+    {
+      nombre: "3. Ciudad Salitre Oriental",
+      lat: 4.652,
+      lng: -74.108,
+      color: "#eab308", // Amarillo
+      popup: "<b>Ciudad Salitre</b><br>🟡 Prioridad Media (Eje Calle 26)"
+    },
+    {
+      nombre: "4. Cedritos (Calle 140)",
+      lat: 4.721,
+      lng: -74.032,
+      color: "#dc2626", // Rojo
+      popup: "<b>Cedritos (Calle 140)</b><br>🔴 Menor Prioridad en esta franja"
+    }
+  ];
+
+  // Agregar los marcadores al mapa
+  ubicaciones.forEach(function(loc) {
+    L.marker([loc.lat, loc.lng], { icon: crearIcono(loc.color) })
+      .addTo(map)
+      .bindPopup(loc.popup);
+  });
+
+  // Función para centrar el mapa al hacer clic en las tarjetas
+  function centrarMapa(lat, lng, zoom) {
+    map.flyTo([lat, lng], zoom, { duration: 1.2 });
+  }
+</script>
+
+</body>
+</html>
