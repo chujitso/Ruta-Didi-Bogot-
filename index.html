@@ -7,8 +7,6 @@
   
   <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- Leaflet Routing Machine para rutas -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
@@ -31,7 +29,6 @@
       --border: #2a3450;
       --shadow: 0 8px 32px rgba(0,0,0,0.4);
       
-      /* Colores de prioridad */
       --green: #22c55e;
       --yellow: #eab308;
       --red: #ef4444;
@@ -52,7 +49,6 @@
       flex-direction: column;
     }
 
-    /* ========== SCROLLBAR ========== */
     ::-webkit-scrollbar { width: 4px; }
     ::-webkit-scrollbar-track { background: var(--bg); }
     ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
@@ -293,6 +289,12 @@
       border-radius: 10px;
     }
 
+    .pharmacy-item .pharm-distance {
+      font-size: 10px;
+      color: var(--green);
+      font-weight: 600;
+    }
+
     /* ========== RUTAS ========== */
     .route-item {
       background: var(--bg);
@@ -316,6 +318,27 @@
 
     .route-item .route-detail i {
       width: 14px;
+    }
+
+    /* ========== RECOMENDACIONES ========== */
+    .recommendation-box {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 12px;
+      border-left: 4px solid var(--primary);
+      margin-bottom: 10px;
+    }
+
+    .recommendation-box .rec-title {
+      font-weight: 600;
+      font-size: 13px;
+      color: var(--primary);
+    }
+
+    .recommendation-box .rec-body {
+      font-size: 11px;
+      color: var(--text-secondary);
+      margin-top: 4px;
     }
 
     /* ========== TOAST ========== */
@@ -461,7 +484,6 @@
       }
     }
 
-    /* ========== LOADING ========== */
     .loading {
       display: flex;
       align-items: center;
@@ -481,7 +503,6 @@
       to { transform: rotate(360deg); }
     }
 
-    /* ========== MODO OSCURO PARA EL MAPA ========== */
     .leaflet-tile-pane {
       filter: brightness(0.7) saturate(0.8);
     }
@@ -505,23 +526,21 @@
         <div class="label">Farmacias</div>
       </div>
       <div class="stat-item">
-        <div class="number" id="totalRoutes">0</div>
-        <div class="label">Rutas</div>
+        <div class="number" id="nearbyCount">0</div>
+        <div class="label">Cerca</div>
       </div>
     </div>
   </header>
 
   <!-- ========== MAIN ========== -->
   <div class="app-main">
-    <!-- Mapa -->
     <div id="map"></div>
 
-    <!-- Panel de Información -->
     <div class="info-panel">
       <div class="panel-header">
         <h2>
           <i class="fas fa-map-marked-alt" style="color: var(--primary);"></i>
-          Estrategia Bogotá
+          <span id="panelTitle">Estrategia Bogotá</span>
         </h2>
         <div class="view-toggle">
           <button class="active" data-view="zones">🏙️ Zonas</button>
@@ -531,19 +550,14 @@
       </div>
 
       <div class="panel-content" id="panelContent">
-        <!-- Sección Zonas -->
         <div class="section active" id="sectionZones">
-          <div class="loading"><i class="fas fa-spinner"></i> Cargando zonas estratégicas...</div>
+          <div class="loading"><i class="fas fa-spinner"></i> Cargando zonas...</div>
         </div>
-        
-        <!-- Sección Farmacias -->
         <div class="section" id="sectionPharmacies">
           <div class="loading"><i class="fas fa-spinner"></i> Cargando farmacias...</div>
         </div>
-        
-        <!-- Sección Rutas -->
         <div class="section" id="sectionRoutes">
-          <div class="loading"><i class="fas fa-spinner"></i> Cargando rutas recomendadas...</div>
+          <div class="loading"><i class="fas fa-spinner"></i> Cargando rutas...</div>
         </div>
       </div>
     </div>
@@ -590,14 +604,13 @@
 
   <!-- ========== SCRIPTS ========== -->
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
   
   <script>
     // ================================================
-    // 1. DATOS ESTRATÉGICOS DE BOGOTÁ
+    // 1. DATOS AMPLIADOS DE BOGOTÁ
     // ================================================
     
-    // Zonas con mayor afluencia de pedidos (basado en datos públicos)
+    // Zonas estratégicas predefinidas
     const ZONES = [
       {
         id: 1,
@@ -664,10 +677,32 @@
         bestTime: '8:00 - 10:00 AM',
         pharmacies: 7,
         clinics: 2
+      },
+      {
+        id: 7,
+        name: 'Suba - Av. Suba',
+        lat: 4.740,
+        lng: -74.085,
+        priority: 'medium',
+        description: 'Zona residencial y comercial',
+        bestTime: '8:00 - 10:00 AM',
+        pharmacies: 4,
+        clinics: 2
+      },
+      {
+        id: 8,
+        name: 'Engativá - Av. Boyacá',
+        lat: 4.700,
+        lng: -74.120,
+        priority: 'low',
+        description: 'Zona residencial',
+        bestTime: '9:00 - 11:00 AM',
+        pharmacies: 3,
+        clinics: 1
       }
     ];
 
-    // Farmacias principales
+    // Farmacias ampliadas (más cobertura)
     const PHARMACIES = [
       { id: 1, name: 'Cruz Verde Chapinero', lat: 4.654, lng: -74.055, address: 'Cl. 72 #9-45' },
       { id: 2, name: 'Farmatodo Chicó', lat: 4.685, lng: -74.048, address: 'Kr. 15 #93-20' },
@@ -678,29 +713,72 @@
       { id: 7, name: 'Farmatodo Zona T', lat: 4.662, lng: -74.050, address: 'Cl. 83 #13-20' },
       { id: 8, name: 'Cruz Verde Calle 100', lat: 4.695, lng: -74.038, address: 'Cl. 100 #15-30' },
       { id: 9, name: 'Drogas La Rebaja Salitre', lat: 4.655, lng: -74.110, address: 'Av. Esperanza #68-90' },
-      { id: 10, name: 'Farmatodo Cedritos', lat: 4.725, lng: -74.030, address: 'Cl. 145 #9-10' }
+      { id: 10, name: 'Farmatodo Cedritos', lat: 4.725, lng: -74.030, address: 'Cl. 145 #9-10' },
+      // Nuevas farmacias para más cobertura
+      { id: 11, name: 'Cruz Verde Suba', lat: 4.740, lng: -74.085, address: 'Av. Suba #120-30' },
+      { id: 12, name: 'Farmatodo Engativá', lat: 4.700, lng: -74.120, address: 'Av. Boyacá #80-45' },
+      { id: 13, name: 'Cruz Verde Bosa', lat: 4.610, lng: -74.185, address: 'Av. Bosa #50-20' },
+      { id: 14, name: 'Drogas La Rebaja Kennedy', lat: 4.640, lng: -74.150, address: 'Av. Américas #60-30' },
+      { id: 15, name: 'Farmatodo Usaquén', lat: 4.710, lng: -74.025, address: 'Cl. 145 #12-50' },
+      { id: 16, name: 'Cruz Verde Fontibón', lat: 4.675, lng: -74.140, address: 'Av. Centenario #45-20' },
+      { id: 17, name: 'Drogas La Rebaja Teusaquillo', lat: 4.645, lng: -74.075, address: 'Cl. 53 #20-15' },
+      { id: 18, name: 'Farmatodo Barrios Unidos', lat: 4.670, lng: -74.070, address: 'Av. 68 #80-25' },
+      { id: 19, name: 'Cruz Verde Santa Fe', lat: 4.620, lng: -74.070, address: 'Cl. 24 #15-30' },
+      { id: 20, name: 'Drogas La Rebaja Puente Aranda', lat: 4.630, lng: -74.110, address: 'Av. Américas #40-15' }
     ];
 
-    // Clínicas y hospitales principales
+    // Clínicas
     const CLINICS = [
       { name: 'Clínica Chapinero', lat: 4.656, lng: -74.052 },
       { name: 'Clínica Universitaria', lat: 4.682, lng: -74.045 },
       { name: 'Hospital Militar', lat: 4.698, lng: -74.035 },
       { name: 'Clínica del Occidente', lat: 4.650, lng: -74.112 },
-      { name: 'Fundación Santa Fe', lat: 4.688, lng: -74.040 }
+      { name: 'Fundación Santa Fe', lat: 4.688, lng: -74.040 },
+      { name: 'Clínica Shaio', lat: 4.675, lng: -74.060 },
+      { name: 'Hospital de Suba', lat: 4.745, lng: -74.082 },
+      { name: 'Clínica Kennedy', lat: 4.645, lng: -74.155 },
+      { name: 'Clínica Marly', lat: 4.645, lng: -74.062 },
+      { name: 'Hospital San Rafael', lat: 4.670, lng: -74.048 }
     ];
 
-    // Ciclorrutas principales (puntos de referencia)
+    // Ciclorrutas
     const CYCLE_ROUTES = [
       { name: 'Ciclovía Calle 72', points: [[4.650, -74.070], [4.658, -74.045]] },
       { name: 'Ciclovía Kr 15', points: [[4.680, -74.050], [4.710, -74.035]] },
       { name: 'Ciclovía Av. Esperanza', points: [[4.645, -74.120], [4.658, -74.080]] },
       { name: 'Ciclovía Calle 100', points: [[4.690, -74.050], [4.700, -74.030]] },
-      { name: 'Ciclovía Kr 9', points: [[4.650, -74.060], [4.730, -74.030]] }
+      { name: 'Ciclovía Kr 9', points: [[4.650, -74.060], [4.730, -74.030]] },
+      { name: 'Ciclovía Av. Suba', points: [[4.730, -74.090], [4.750, -74.075]] },
+      { name: 'Ciclovía Av. Boyacá', points: [[4.680, -74.125], [4.720, -74.110]] }
     ];
 
     // ================================================
-    // 2. INICIALIZAR MAPA
+    // 2. ESTADO DE LA APP
+    // ================================================
+    let userLocation = null;
+    let userMarker = null;
+    let nearbyPharmacies = [];
+    let isHeatmapActive = false;
+
+    // ================================================
+    // 3. FUNCIONES DE UTILIDAD
+    // ================================================
+    
+    // Calcular distancia entre dos puntos (fórmula de Haversine)
+    function calculateDistance(lat1, lon1, lat2, lon2) {
+      const R = 6371; // Radio de la Tierra en km
+      const dLat = (lat2 - lat1) * Math.PI / 180;
+      const dLon = (lon2 - lon1) * Math.PI / 180;
+      const a = 
+        Math.sin(dLat/2) * Math.sin(dLat/2) +
+        Math.cos(lat1 * Math.PI / 180) * Math.cos(lat2 * Math.PI / 180) * 
+        Math.sin(dLon/2) * Math.sin(dLon/2);
+      const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+      return R * c;
+    }
+
+    // ================================================
+    // 4. INICIALIZAR MAPA
     // ================================================
     const map = L.map('map', {
       center: [4.675, -74.060],
@@ -708,14 +786,13 @@
       zoomControl: false
     });
 
-    // Capa de mapa con estilo oscuro
     L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
       maxZoom: 18,
       attribution: '© OpenStreetMap'
     }).addTo(map);
 
     // ================================================
-    // 3. CREAR ICONOS PERSONALIZADOS
+    // 5. CREAR ICONOS
     // ================================================
     function createIcon(color, size = 12) {
       return L.divIcon({
@@ -727,10 +804,9 @@
     }
 
     // ================================================
-    // 4. AGREGAR CAPAS AL MAPA
+    // 6. AGREGAR CAPAS AL MAPA
     // ================================================
     
-    // Zonas estratégicas (círculos de calor)
     const zoneLayers = [];
     ZONES.forEach(zone => {
       const color = zone.priority === 'high' ? 'rgba(34, 197, 94, 0.3)' : 
@@ -765,7 +841,7 @@
       marker.bindPopup(`
         <b>${pharm.name}</b><br>
         📍 ${pharm.address}<br>
-        <i class="fas fa-prescription"></i> Farmacia 24h
+        <i class="fas fa-prescription"></i> Farmacia
       `);
       
       pharmacyMarkers.push(marker);
@@ -783,7 +859,7 @@
       `);
     });
 
-    // Ciclorrutas (líneas)
+    // Ciclorrutas
     CYCLE_ROUTES.forEach(route => {
       L.polyline(route.points, {
         color: '#22c55e',
@@ -797,16 +873,125 @@
     });
 
     // ================================================
-    // 5. RENDERIZAR PANEL DE INFORMACIÓN
+    // 7. FUNCIÓN: UBICAR USUARIO Y GENERAR RECOMENDACIONES
     // ================================================
     
-    function renderZones() {
+    function locateUser() {
+      if (navigator.geolocation) {
+        // Mostrar loading
+        showToast('📍 Buscando ubicación...', 'Activando GPS');
+        
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            userLocation = { lat, lng };
+            
+            // Centrar mapa
+            map.flyTo([lat, lng], 15, { duration: 1.5 });
+            
+            // Marcar ubicación del usuario
+            if (userMarker) {
+              map.removeLayer(userMarker);
+            }
+            userMarker = L.marker([lat, lng], {
+              icon: createIcon('#ff5200', 20)
+            }).addTo(map);
+            userMarker.bindPopup('📍 Tu ubicación').openPopup();
+            
+            // Generar recomendaciones basadas en ubicación
+            generateRecommendations(lat, lng);
+            
+            showToast('📍 Ubicación encontrada', 'Generando recomendaciones personalizadas');
+          },
+          () => {
+            showToast('⚠️ Error', 'No se pudo obtener tu ubicación. Activa el GPS.');
+          },
+          {
+            enableHighAccuracy: true,
+            timeout: 10000,
+            maximumAge: 0
+          }
+        );
+      } else {
+        showToast('⚠️ Error', 'Tu navegador no soporta geolocalización');
+      }
+    }
+
+    // ================================================
+    // 8. GENERAR RECOMENDACIONES PERSONALIZADAS
+    // ================================================
+    
+    function generateRecommendations(lat, lng) {
+      // 1. Encontrar farmacias cercanas (radio 3 km)
+      nearbyPharmacies = PHARMACIES
+        .map(pharm => {
+          const distance = calculateDistance(lat, lng, pharm.lat, pharm.lng);
+          return { ...pharm, distance };
+        })
+        .filter(p => p.distance <= 3)
+        .sort((a, b) => a.distance - b.distance);
+      
+      // 2. Encontrar zonas cercanas
+      const nearbyZones = ZONES
+        .map(zone => {
+          const distance = calculateDistance(lat, lng, zone.lat, zone.lng);
+          return { ...zone, distance };
+        })
+        .filter(z => z.distance <= 3)
+        .sort((a, b) => a.distance - b.distance);
+      
+      // 3. Actualizar estadísticas
+      document.getElementById('nearbyCount').textContent = nearbyPharmacies.length;
+      
+      // 4. Actualizar panel de zonas con recomendaciones
+      renderZonesWithRecommendations(nearbyZones);
+      
+      // 5. Actualizar panel de farmacias con distancias
+      renderPharmaciesWithDistances();
+      
+      // 6. Actualizar título del panel
+      if (nearbyZones.length > 0) {
+        document.getElementById('panelTitle').textContent = `📍 Zonas cerca de ti`;
+      } else {
+        document.getElementById('panelTitle').textContent = `🌍 Explora Bogotá`;
+      }
+      
+      // 7. Agregar recomendaciones especiales
+      addRecommendations(nearbyZones, nearbyPharmacies);
+    }
+
+    // ================================================
+    // 9. RENDERIZAR ZONAS CON RECOMENDACIONES
+    // ================================================
+    
+    function renderZonesWithRecommendations(nearbyZones) {
       const container = document.getElementById('sectionZones');
+      
+      // Si hay zonas cercanas, mostrarlas primero
+      let zonesToShow = nearbyZones.length > 0 ? nearbyZones : ZONES;
+      
       container.innerHTML = `
+        ${nearbyZones.length > 0 ? `
+          <div class="recommendation-box">
+            <div class="rec-title">🎯 Recomendación personalizada</div>
+            <div class="rec-body">
+              Encontramos ${nearbyZones.length} zonas estratégicas a menos de 3 km de ti.
+              ${nearbyZones[0] ? `La más cercana es <b>${nearbyZones[0].name}</b> a ${nearbyZones[0].distance.toFixed(2)} km.` : ''}
+            </div>
+          </div>
+        ` : `
+          <div class="recommendation-box" style="border-left-color: var(--yellow);">
+            <div class="rec-title">💡 Consejo</div>
+            <div class="rec-body">
+              No hay zonas predefinidas cerca de ti. Explora el mapa para encontrar farmacias y clínicas cercanas.
+            </div>
+          </div>
+        `}
         <div class="zone-grid">
-          ${ZONES.map(zone => `
-            <div class="zone-card" onclick="focusZone(${zone.lat}, ${zone.lng})">
-              <div class="zone-name">${zone.name}</div>
+          ${zonesToShow.map(zone => `
+            <div class="zone-card" onclick="focusZone(${zone.lat}, ${zone.lng})" style="border-left-color: ${zone.priority === 'high' ? 'var(--green)' : zone.priority === 'medium' ? 'var(--yellow)' : 'var(--red)'};">
+              <div class="zone-name">${zone.name} ${zone.distance ? `📍 ${zone.distance.toFixed(2)} km` : ''}</div>
               <div class="zone-detail">
                 <i class="fas fa-clock"></i> ${zone.bestTime}
               </div>
@@ -823,27 +1008,52 @@
           `).join('')}
         </div>
       `;
-      document.getElementById('totalZones').textContent = ZONES.length;
+      
+      document.getElementById('totalZones').textContent = zonesToShow.length;
     }
 
-    function renderPharmacies() {
+    // ================================================
+    // 10. RENDERIZAR FARMACIAS CON DISTANCIAS
+    // ================================================
+    
+    function renderPharmaciesWithDistances() {
       const container = document.getElementById('sectionPharmacies');
+      
+      let pharmaciesToShow = nearbyPharmacies.length > 0 ? nearbyPharmacies : PHARMACIES;
+      
       container.innerHTML = `
+        ${nearbyPharmacies.length > 0 ? `
+          <div class="recommendation-box" style="border-left-color: var(--blue);">
+            <div class="rec-title">💊 Farmacias cerca de ti</div>
+            <div class="rec-body">
+              ${nearbyPharmacies.length} farmacias en un radio de 3 km.
+              ${nearbyPharmacies[0] ? `La más cercana es <b>${nearbyPharmacies[0].name}</b> a ${nearbyPharmacies[0].distance.toFixed(2)} km.` : ''}
+            </div>
+          </div>
+        ` : ''}
         <div class="pharmacy-list">
-          ${PHARMACIES.map(pharm => `
+          ${pharmaciesToShow.map(pharm => `
             <div class="pharmacy-item" onclick="focusPharmacy(${pharm.lat}, ${pharm.lng})">
               <div class="pharm-info">
                 <div class="pharm-name">${pharm.name}</div>
                 <div class="pharm-address">${pharm.address}</div>
               </div>
-              <span class="pharm-type">24h</span>
+              <div style="display:flex; flex-direction:column; align-items:flex-end; gap:4px;">
+                ${pharm.distance ? `<span class="pharm-distance">${pharm.distance.toFixed(2)} km</span>` : ''}
+                <span class="pharm-type">24h</span>
+              </div>
             </div>
           `).join('')}
         </div>
       `;
-      document.getElementById('totalPharmacies').textContent = PHARMACIES.length;
+      
+      document.getElementById('totalPharmacies').textContent = pharmaciesToShow.length;
     }
 
+    // ================================================
+    // 11. RENDERIZAR RUTAS
+    // ================================================
+    
     function renderRoutes() {
       const container = document.getElementById('sectionRoutes');
       container.innerHTML = `
@@ -863,13 +1073,45 @@
               <span>Conecta todas las zonas usando la ciclovía de la Kr 15 y Calle 72</span>
             </div>
           </div>
+          ${userLocation ? `
+            <div class="route-item" style="border-left: 4px solid var(--blue);">
+              <div class="route-title">📍 Desde tu ubicación</div>
+              <div class="route-detail">
+                <span>Busca la ciclorruta más cercana para moverte rápido</span>
+              </div>
+            </div>
+          ` : ''}
         </div>
       `;
-      document.getElementById('totalRoutes').textContent = CYCLE_ROUTES.length;
     }
 
     // ================================================
-    // 6. FUNCIONES DE NAVEGACIÓN
+    // 12. AGREGAR RECOMENDACIONES ESPECIALES
+    // ================================================
+    
+    function addRecommendations(nearbyZones, nearbyPharmacies) {
+      // Si hay zonas cercanas, mostrar toast con la mejor opción
+      if (nearbyZones.length > 0) {
+        const bestZone = nearbyZones[0];
+        setTimeout(() => {
+          showToast(
+            `🎯 Mejor opción: ${bestZone.name}`,
+            `A ${bestZone.distance.toFixed(2)} km · ${bestZone.pharmacies} farmacias · ${bestZone.clinics} clínicas`
+          );
+        }, 2000);
+      } else if (nearbyPharmacies.length > 0) {
+        const bestPharm = nearbyPharmacies[0];
+        setTimeout(() => {
+          showToast(
+            `💊 Farmacia más cercana`,
+            `${bestPharm.name} a ${bestPharm.distance.toFixed(2)} km`
+          );
+        }, 2000);
+      }
+    }
+
+    // ================================================
+    // 13. FUNCIONES DE NAVEGACIÓN
     // ================================================
     
     window.focusZone = function(lat, lng) {
@@ -882,48 +1124,32 @@
       showToast('💊 Farmacia cercana', 'Ubícate cerca para recibir pedidos de farmacia');
     };
 
-    window.locateUser = function() {
-      if (navigator.geolocation) {
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            map.flyTo([lat, lng], 16, { duration: 1 });
-            
-            // Marcar ubicación del usuario
-            L.marker([lat, lng], {
-              icon: createIcon('#ff5200', 18)
-            }).addTo(map).bindPopup('📍 Tu ubicación');
-            
-            showToast('📍 Ubicación encontrada', 'Ahora puedes ver las zonas cercanas');
-          },
-          () => {
-            showToast('⚠️ Error', 'No se pudo obtener tu ubicación. Activa el GPS.');
-          }
-        );
+    window.resetMapView = function() {
+      map.flyTo([4.675, -74.060], 12, { duration: 1 });
+      // Restaurar vista normal
+      if (userLocation) {
+        generateRecommendations(userLocation.lat, userLocation.lng);
       } else {
-        showToast('⚠️ Error', 'Tu navegador no soporta geolocalización');
+        renderZonesWithRecommendations([]);
+        renderPharmaciesWithDistances();
+        document.getElementById('panelTitle').textContent = '🌍 Explora Bogotá';
       }
     };
 
-    window.resetMapView = function() {
-      map.flyTo([4.675, -74.060], 12, { duration: 1 });
-    };
-
     window.toggleHeatmap = function() {
-      // Simular mapa de calor cambiando el estilo del mapa
       const pane = document.querySelector('.leaflet-tile-pane');
-      if (pane.style.filter === 'brightness(0.7) saturate(0.8)') {
-        pane.style.filter = 'brightness(1) saturate(1)';
-        showToast('🔥 Modo normal', 'Visualización estándar');
+      isHeatmapActive = !isHeatmapActive;
+      if (isHeatmapActive) {
+        pane.style.filter = 'brightness(0.6) saturate(1.5) contrast(1.2)';
+        showToast('🔥 Modo calor activado', 'Zonas más cálidas = mayor densidad');
       } else {
         pane.style.filter = 'brightness(0.7) saturate(0.8)';
-        showToast('🔥 Modo calor', 'Destacando zonas con mayor densidad');
+        showToast('🌙 Modo normal', 'Visualización estándar');
       }
     };
 
     // ================================================
-    // 7. TOAST / NOTIFICACIONES
+    // 14. TOAST / NOTIFICACIONES
     // ================================================
     let toastTimeout;
 
@@ -936,11 +1162,11 @@
       clearTimeout(toastTimeout);
       toastTimeout = setTimeout(() => {
         toast.classList.remove('show');
-      }, 4000);
+      }, 5000);
     }
 
     // ================================================
-    // 8. CONTROLES DE VISTA
+    // 15. CONTROLES DE VISTA
     // ================================================
     
     document.querySelectorAll('.view-toggle button').forEach(btn => {
@@ -955,14 +1181,13 @@
     });
 
     // ================================================
-    // 9. NAVEGACIÓN BOTTOM
+    // 16. NAVEGACIÓN BOTTOM
     // ================================================
     document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
       item.addEventListener('click', function() {
         document.querySelectorAll('.bottom-nav .nav-item').forEach(i => i.classList.remove('active'));
         this.classList.add('active');
         
-        // Acciones según el botón
         const label = this.querySelector('span')?.textContent;
         if (label === 'Zonas Calientes') {
           map.flyTo([4.685, -74.048], 13, { duration: 1 });
@@ -970,48 +1195,67 @@
         } else if (label === 'Rutas') {
           map.flyTo([4.675, -74.060], 13, { duration: 1 });
           showToast('🚴 Rutas óptimas', 'Usa la ciclovía de Kr 15 para moverte rápido');
+          // Cambiar a vista de rutas
+          document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+          document.querySelector('[data-view="routes"]').classList.add('active');
+          document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+          document.getElementById('sectionRoutes').classList.add('active');
         } else if (label === 'Estadísticas') {
-          showToast('📊 Estadísticas', 'Zonas con más pedidos: Chapinero, Chicó, Salitre');
+          showToast('📊 Estadísticas', 
+            userLocation ? 
+            `Tienes ${nearbyPharmacies.length} farmacias cerca` : 
+            'Usa "Mi Ubicación" para ver estadísticas personalizadas'
+          );
         } else {
           map.flyTo([4.675, -74.060], 12, { duration: 1 });
+          // Cambiar a vista de zonas
+          document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+          document.querySelector('[data-view="zones"]').classList.add('active');
+          document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+          document.getElementById('sectionZones').classList.add('active');
+          if (userLocation) {
+            generateRecommendations(userLocation.lat, userLocation.lng);
+          }
         }
       });
     });
 
     // ================================================
-    // 10. INICIAR APP
+    // 17. INICIAR APP
     // ================================================
     function initApp() {
-      renderZones();
-      renderPharmacies();
+      renderZonesWithRecommendations([]);
+      renderPharmaciesWithDistances();
       renderRoutes();
       
-      // Mostrar consejo inicial
       setTimeout(() => {
-        showToast('🚴‍♂️ Bienvenido', 'Explora las zonas estratégicas para maximizar tus ingresos');
+        showToast('🚴‍♂️ DiDi Farma Navigator', 'Presiona 📍 para recomendaciones personalizadas');
       }, 1000);
+      
+      // Intentar obtener ubicación automáticamente (con permiso del usuario)
+      if ('geolocation' in navigator) {
+        setTimeout(() => {
+          locateUser();
+        }, 3000);
+      }
       
       console.log('✅ DiDi Farma Navigator iniciado');
     }
 
-    initApp();
-
     // ================================================
-    // 11. ACTUALIZAR CADA 5 MINUTOS (simulación)
+    // 18. ACTUALIZAR CADA 5 MINUTOS
     // ================================================
     setInterval(() => {
-      // Simular actualización de datos
-      console.log('🔄 Actualizando datos estratégicos...');
+      if (userLocation) {
+        generateRecommendations(userLocation.lat, userLocation.lng);
+        console.log('🔄 Recomendaciones actualizadas');
+      }
     }, 300000);
 
-    // ================================================
-    // 12. PWA SUPPORT
-    // ================================================
-    if ('serviceWorker' in navigator) {
-      // navigator.serviceWorker.register('/sw.js');
-    }
+    // Iniciar la app
+    initApp();
 
-    console.log('💡 Consejo: Las mejores horas para farmacias son 7-9 AM');
+    console.log('💡 Consejo: Usa el botón 📍 para recomendaciones personalizadas');
   </script>
 </body>
 </html>
