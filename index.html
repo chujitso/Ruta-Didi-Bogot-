@@ -606,151 +606,240 @@
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
   
   <script>
-    // ================================================
-    // 1. DATOS AMPLIADOS DE BOGOTÁ
-    // ================================================
+ 
     
-    // Zonas estratégicas predefinidas
-    const ZONES = [
-      {
-        id: 1,
-        name: 'Chapinero Financiero',
-        lat: 4.654,
-        lng: -74.055,
-        priority: 'high',
-        description: 'Alta densidad de oficinas y farmacias',
-        bestTime: '7:00 - 9:00 AM',
-        pharmacies: 12,
-        clinics: 4
-      },
-      {
-        id: 2,
-        name: 'Chicó / Pepe Sierra',
-        lat: 4.685,
-        lng: -74.048,
-        priority: 'high',
-        description: 'Zona residencial de alto poder adquisitivo',
-        bestTime: '8:00 - 11:00 AM',
-        pharmacies: 8,
-        clinics: 3
-      },
-      {
-        id: 3,
-        name: 'Ciudad Salitre',
-        lat: 4.652,
-        lng: -74.108,
-        priority: 'medium',
-        description: 'Mezcla de oficinas y residencias',
-        bestTime: '7:00 - 10:00 AM',
-        pharmacies: 6,
-        clinics: 2
-      },
-      {
-        id: 4,
-        name: 'Cedritos',
-        lat: 4.721,
-        lng: -74.032,
-        priority: 'medium',
-        description: 'Alta densidad residencial',
-        bestTime: '9:00 - 11:00 AM',
-        pharmacies: 5,
-        clinics: 1
-      },
-      {
-        id: 5,
-        name: 'Calle 100 - Kr 15',
-        lat: 4.695,
-        lng: -74.038,
-        priority: 'high',
-        description: 'Corredor comercial y clínicas',
-        bestTime: '7:00 - 9:30 AM',
-        pharmacies: 10,
-        clinics: 5
-      },
-      {
-        id: 6,
-        name: 'Zona T / Andino',
-        lat: 4.662,
-        lng: -74.050,
-        priority: 'high',
-        description: 'Centro comercial y oficinas',
-        bestTime: '8:00 - 10:00 AM',
-        pharmacies: 7,
-        clinics: 2
-      },
-      {
-        id: 7,
-        name: 'Suba - Av. Suba',
-        lat: 4.740,
-        lng: -74.085,
-        priority: 'medium',
-        description: 'Zona residencial y comercial',
-        bestTime: '8:00 - 10:00 AM',
-        pharmacies: 4,
-        clinics: 2
-      },
-      {
-        id: 8,
-        name: 'Engativá - Av. Boyacá',
-        lat: 4.700,
-        lng: -74.120,
-        priority: 'low',
-        description: 'Zona residencial',
-        bestTime: '9:00 - 11:00 AM',
-        pharmacies: 3,
-        clinics: 1
-      }
-    ];
+// ================================================
+// 1. DATOS AMPLIADOS DE BOGOTÁ Y SOACHA
+// ================================================
 
-    // Farmacias ampliadas (más cobertura)
-    const PHARMACIES = [
-      { id: 1, name: 'Cruz Verde Chapinero', lat: 4.654, lng: -74.055, address: 'Cl. 72 #9-45' },
-      { id: 2, name: 'Farmatodo Chicó', lat: 4.685, lng: -74.048, address: 'Kr. 15 #93-20' },
-      { id: 3, name: 'Cruz Verde Salitre', lat: 4.652, lng: -74.108, address: 'Av. Esperanza #66-80' },
-      { id: 4, name: 'Farmatodo Cedritos', lat: 4.721, lng: -74.032, address: 'Cl. 140 #9-30' },
-      { id: 5, name: 'Drogas La Rebaja Chapinero', lat: 4.660, lng: -74.058, address: 'Cl. 67 #10-12' },
-      { id: 6, name: 'Cruz Verde Pepe Sierra', lat: 4.692, lng: -74.042, address: 'Cl. 116 #15-40' },
-      { id: 7, name: 'Farmatodo Zona T', lat: 4.662, lng: -74.050, address: 'Cl. 83 #13-20' },
-      { id: 8, name: 'Cruz Verde Calle 100', lat: 4.695, lng: -74.038, address: 'Cl. 100 #15-30' },
-      { id: 9, name: 'Drogas La Rebaja Salitre', lat: 4.655, lng: -74.110, address: 'Av. Esperanza #68-90' },
-      { id: 10, name: 'Farmatodo Cedritos', lat: 4.725, lng: -74.030, address: 'Cl. 145 #9-10' },
-      // Nuevas farmacias para más cobertura
-      { id: 11, name: 'Cruz Verde Suba', lat: 4.740, lng: -74.085, address: 'Av. Suba #120-30' },
-      { id: 12, name: 'Farmatodo Engativá', lat: 4.700, lng: -74.120, address: 'Av. Boyacá #80-45' },
-      { id: 13, name: 'Cruz Verde Bosa', lat: 4.610, lng: -74.185, address: 'Av. Bosa #50-20' },
-      { id: 14, name: 'Drogas La Rebaja Kennedy', lat: 4.640, lng: -74.150, address: 'Av. Américas #60-30' },
-      { id: 15, name: 'Farmatodo Usaquén', lat: 4.710, lng: -74.025, address: 'Cl. 145 #12-50' },
-      { id: 16, name: 'Cruz Verde Fontibón', lat: 4.675, lng: -74.140, address: 'Av. Centenario #45-20' },
-      { id: 17, name: 'Drogas La Rebaja Teusaquillo', lat: 4.645, lng: -74.075, address: 'Cl. 53 #20-15' },
-      { id: 18, name: 'Farmatodo Barrios Unidos', lat: 4.670, lng: -74.070, address: 'Av. 68 #80-25' },
-      { id: 19, name: 'Cruz Verde Santa Fe', lat: 4.620, lng: -74.070, address: 'Cl. 24 #15-30' },
-      { id: 20, name: 'Drogas La Rebaja Puente Aranda', lat: 4.630, lng: -74.110, address: 'Av. Américas #40-15' }
-    ];
+// Zonas estratégicas (incluyendo Soacha)
+const ZONES = [
+  // Zonas de Bogotá (norte)
+  {
+    id: 1,
+    name: 'Chapinero Financiero',
+    lat: 4.654,
+    lng: -74.055,
+    priority: 'high',
+    description: 'Alta densidad de oficinas y farmacias',
+    bestTime: '7:00 - 9:00 AM',
+    pharmacies: 12,
+    clinics: 4
+  },
+  {
+    id: 2,
+    name: 'Chicó / Pepe Sierra',
+    lat: 4.685,
+    lng: -74.048,
+    priority: 'high',
+    description: 'Zona residencial de alto poder adquisitivo',
+    bestTime: '8:00 - 11:00 AM',
+    pharmacies: 8,
+    clinics: 3
+  },
+  {
+    id: 3,
+    name: 'Ciudad Salitre',
+    lat: 4.652,
+    lng: -74.108,
+    priority: 'medium',
+    description: 'Mezcla de oficinas y residencias',
+    bestTime: '7:00 - 10:00 AM',
+    pharmacies: 6,
+    clinics: 2
+  },
+  {
+    id: 4,
+    name: 'Cedritos',
+    lat: 4.721,
+    lng: -74.032,
+    priority: 'medium',
+    description: 'Alta densidad residencial',
+    bestTime: '9:00 - 11:00 AM',
+    pharmacies: 5,
+    clinics: 1
+  },
+  {
+    id: 5,
+    name: 'Calle 100 - Kr 15',
+    lat: 4.695,
+    lng: -74.038,
+    priority: 'high',
+    description: 'Corredor comercial y clínicas',
+    bestTime: '7:00 - 9:30 AM',
+    pharmacies: 10,
+    clinics: 5
+  },
+  {
+    id: 6,
+    name: 'Zona T / Andino',
+    lat: 4.662,
+    lng: -74.050,
+    priority: 'high',
+    description: 'Centro comercial y oficinas',
+    bestTime: '8:00 - 10:00 AM',
+    pharmacies: 7,
+    clinics: 2
+  },
+  {
+    id: 7,
+    name: 'Suba - Av. Suba',
+    lat: 4.740,
+    lng: -74.085,
+    priority: 'medium',
+    description: 'Zona residencial y comercial',
+    bestTime: '8:00 - 10:00 AM',
+    pharmacies: 4,
+    clinics: 2
+  },
+  {
+    id: 8,
+    name: 'Engativá - Av. Boyacá',
+    lat: 4.700,
+    lng: -74.120,
+    priority: 'low',
+    description: 'Zona residencial',
+    bestTime: '9:00 - 11:00 AM',
+    pharmacies: 3,
+    clinics: 1
+  },
+  // ZONAS DE SOACHA Y ALREDEDORES
+  {
+    id: 9,
+    name: 'Soacha Centro - Av. San Marín',
+    lat: 4.587,
+    lng: -74.220,
+    priority: 'high',
+    description: 'Centro comercial y residencial de Soacha',
+    bestTime: '7:00 - 10:00 AM',
+    pharmacies: 6,
+    clinics: 3
+  },
+  {
+    id: 10,
+    name: 'Soacha - Unisur',
+    lat: 4.575,
+    lng: -74.215,
+    priority: 'high',
+    description: 'Zona comercial alrededor del CC Unisur',
+    bestTime: '8:00 - 11:00 AM',
+    pharmacies: 4,
+    clinics: 2
+  },
+  {
+    id: 11,
+    name: 'Bosa - Av. Bosa',
+    lat: 4.610,
+    lng: -74.185,
+    priority: 'medium',
+    description: 'Alta densidad poblacional',
+    bestTime: '7:30 - 10:00 AM',
+    pharmacies: 5,
+    clinics: 2
+  },
+  {
+    id: 12,
+    name: 'Kennedy - Av. Américas',
+    lat: 4.640,
+    lng: -74.150,
+    priority: 'medium',
+    description: 'Zona comercial y residencial',
+    bestTime: '8:00 - 10:30 AM',
+    pharmacies: 6,
+    clinics: 3
+  },
+  {
+    id: 13,
+    name: 'Fontibón - Av. Centenario',
+    lat: 4.675,
+    lng: -74.140,
+    priority: 'medium',
+    description: 'Zona industrial y comercial',
+    bestTime: '7:00 - 9:30 AM',
+    pharmacies: 4,
+    clinics: 2
+  }
+];
 
-    // Clínicas
-    const CLINICS = [
-      { name: 'Clínica Chapinero', lat: 4.656, lng: -74.052 },
-      { name: 'Clínica Universitaria', lat: 4.682, lng: -74.045 },
-      { name: 'Hospital Militar', lat: 4.698, lng: -74.035 },
-      { name: 'Clínica del Occidente', lat: 4.650, lng: -74.112 },
-      { name: 'Fundación Santa Fe', lat: 4.688, lng: -74.040 },
-      { name: 'Clínica Shaio', lat: 4.675, lng: -74.060 },
-      { name: 'Hospital de Suba', lat: 4.745, lng: -74.082 },
-      { name: 'Clínica Kennedy', lat: 4.645, lng: -74.155 },
-      { name: 'Clínica Marly', lat: 4.645, lng: -74.062 },
-      { name: 'Hospital San Rafael', lat: 4.670, lng: -74.048 }
-    ];
+// Farmacias ampliadas (incluyendo Soacha)
+const PHARMACIES = [
+  // Bogotá - Norte
+  { id: 1, name: 'Cruz Verde Chapinero', lat: 4.654, lng: -74.055, address: 'Cl. 72 #9-45' },
+  { id: 2, name: 'Farmatodo Chicó', lat: 4.685, lng: -74.048, address: 'Kr. 15 #93-20' },
+  { id: 3, name: 'Cruz Verde Salitre', lat: 4.652, lng: -74.108, address: 'Av. Esperanza #66-80' },
+  { id: 4, name: 'Farmatodo Cedritos', lat: 4.721, lng: -74.032, address: 'Cl. 140 #9-30' },
+  { id: 5, name: 'Drogas La Rebaja Chapinero', lat: 4.660, lng: -74.058, address: 'Cl. 67 #10-12' },
+  { id: 6, name: 'Cruz Verde Pepe Sierra', lat: 4.692, lng: -74.042, address: 'Cl. 116 #15-40' },
+  { id: 7, name: 'Farmatodo Zona T', lat: 4.662, lng: -74.050, address: 'Cl. 83 #13-20' },
+  { id: 8, name: 'Cruz Verde Calle 100', lat: 4.695, lng: -74.038, address: 'Cl. 100 #15-30' },
+  { id: 9, name: 'Drogas La Rebaja Salitre', lat: 4.655, lng: -74.110, address: 'Av. Esperanza #68-90' },
+  { id: 10, name: 'Farmatodo Cedritos', lat: 4.725, lng: -74.030, address: 'Cl. 145 #9-10' },
+  { id: 11, name: 'Cruz Verde Suba', lat: 4.740, lng: -74.085, address: 'Av. Suba #120-30' },
+  { id: 12, name: 'Farmatodo Engativá', lat: 4.700, lng: -74.120, address: 'Av. Boyacá #80-45' },
+  
+  // Bogotá - Sur
+  { id: 13, name: 'Cruz Verde Bosa', lat: 4.610, lng: -74.185, address: 'Av. Bosa #50-20' },
+  { id: 14, name: 'Drogas La Rebaja Kennedy', lat: 4.640, lng: -74.150, address: 'Av. Américas #60-30' },
+  { id: 15, name: 'Farmatodo Usaquén', lat: 4.710, lng: -74.025, address: 'Cl. 145 #12-50' },
+  { id: 16, name: 'Cruz Verde Fontibón', lat: 4.675, lng: -74.140, address: 'Av. Centenario #45-20' },
+  { id: 17, name: 'Drogas La Rebaja Teusaquillo', lat: 4.645, lng: -74.075, address: 'Cl. 53 #20-15' },
+  { id: 18, name: 'Farmatodo Barrios Unidos', lat: 4.670, lng: -74.070, address: 'Av. 68 #80-25' },
+  { id: 19, name: 'Cruz Verde Santa Fe', lat: 4.620, lng: -74.070, address: 'Cl. 24 #15-30' },
+  { id: 20, name: 'Drogas La Rebaja Puente Aranda', lat: 4.630, lng: -74.110, address: 'Av. Américas #40-15' },
+  
+  // ========== SOACHA Y ALREDEDORES ==========
+  // Farmacias de Soacha
+  { id: 21, name: 'Farmatodo Soacha', lat: 4.587, lng: -74.220, address: 'Av. San Marín #7-30' },
+  { id: 22, name: 'Cruz Verde Soacha Unisur', lat: 4.575, lng: -74.215, address: 'CC Unisur - Autopista Sur' },
+  { id: 23, name: 'Drogas La Rebaja Soacha', lat: 4.585, lng: -74.225, address: 'Autopista Sur #13-80' },
+  { id: 24, name: 'Cruz Verde Soacha Centro', lat: 4.590, lng: -74.222, address: 'Cl. 7 #8-45' },
+  { id: 25, name: 'Farmatodo Soacha San Mateo', lat: 4.580, lng: -74.218, address: 'San Mateo - Cl. 5 #10-20' },
+  
+  // Zona de Bosa (cercana a Soacha)
+  { id: 26, name: 'Cruz Verde Bosa Centro', lat: 4.612, lng: -74.188, address: 'Av. Bosa #45-30' },
+  { id: 27, name: 'Drogas La Rebaja Bosa', lat: 4.608, lng: -74.190, address: 'Av. Bosa #60-15' },
+  
+  // Zona de Kennedy (conexión con Soacha por Autopista Sur)
+  { id: 28, name: 'Farmatodo Kennedy', lat: 4.642, lng: -74.148, address: 'Av. Américas #70-50' },
+  { id: 29, name: 'Cruz Verde Kennedy', lat: 4.638, lng: -74.152, address: 'Av. Américas #80-20' },
+  
+  // Zona de Fontibón (conexión vial)
+  { id: 30, name: 'Drogas La Rebaja Fontibón', lat: 4.678, lng: -74.142, address: 'Av. Centenario #50-30' }
+];
 
-    // Ciclorrutas
-    const CYCLE_ROUTES = [
-      { name: 'Ciclovía Calle 72', points: [[4.650, -74.070], [4.658, -74.045]] },
-      { name: 'Ciclovía Kr 15', points: [[4.680, -74.050], [4.710, -74.035]] },
-      { name: 'Ciclovía Av. Esperanza', points: [[4.645, -74.120], [4.658, -74.080]] },
-      { name: 'Ciclovía Calle 100', points: [[4.690, -74.050], [4.700, -74.030]] },
-      { name: 'Ciclovía Kr 9', points: [[4.650, -74.060], [4.730, -74.030]] },
-      { name: 'Ciclovía Av. Suba', points: [[4.730, -74.090], [4.750, -74.075]] },
-      { name: 'Ciclovía Av. Boyacá', points: [[4.680, -74.125], [4.720, -74.110]] }
-    ];
+// Clínicas (incluyendo Soacha)
+const CLINICS = [
+  // Bogotá
+  { name: 'Clínica Chapinero', lat: 4.656, lng: -74.052 },
+  { name: 'Clínica Universitaria', lat: 4.682, lng: -74.045 },
+  { name: 'Hospital Militar', lat: 4.698, lng: -74.035 },
+  { name: 'Clínica del Occidente', lat: 4.650, lng: -74.112 },
+  { name: 'Fundación Santa Fe', lat: 4.688, lng: -74.040 },
+  { name: 'Clínica Shaio', lat: 4.675, lng: -74.060 },
+  { name: 'Hospital de Suba', lat: 4.745, lng: -74.082 },
+  { name: 'Clínica Kennedy', lat: 4.645, lng: -74.155 },
+  { name: 'Clínica Marly', lat: 4.645, lng: -74.062 },
+  { name: 'Hospital San Rafael', lat: 4.670, lng: -74.048 },
+  // Soacha y alrededores
+  { name: 'Hospital de Soacha', lat: 4.588, lng: -74.218 },
+  { name: 'Clínica San Mateo', lat: 4.578, lng: -74.215 },
+  { name: 'Hospital de Bosa', lat: 4.615, lng: -74.185 },
+  { name: 'Clínica Kennedy Sur', lat: 4.635, lng: -74.148 }
+];
+
+// Ciclorrutas (incluyendo conexión Soacha-Bogotá)
+const CYCLE_ROUTES = [
+  // Bogotá
+  { name: 'Ciclovía Calle 72', points: [[4.650, -74.070], [4.658, -74.045]] },
+  { name: 'Ciclovía Kr 15', points: [[4.680, -74.050], [4.710, -74.035]] },
+  { name: 'Ciclovía Av. Esperanza', points: [[4.645, -74.120], [4.658, -74.080]] },
+  { name: 'Ciclovía Calle 100', points: [[4.690, -74.050], [4.700, -74.030]] },
+  { name: 'Ciclovía Kr 9', points: [[4.650, -74.060], [4.730, -74.030]] },
+  { name: 'Ciclovía Av. Suba', points: [[4.730, -74.090], [4.750, -74.075]] },
+  { name: 'Ciclovía Av. Boyacá', points: [[4.680, -74.125], [4.720, -74.110]] },
+  // Conexión Soacha - Bogotá (Autopista Sur)
+  { name: 'Ciclovía Autopista Sur (Soacha - Bogotá)', points: [[4.575, -74.215], [4.620, -74.190], [4.650, -74.160]] }
+];
 
     // ================================================
     // 2. ESTADO DE LA APP
@@ -923,13 +1012,13 @@
     // ================================================
     
     function generateRecommendations(lat, lng) {
-      // 1. Encontrar farmacias cercanas (radio 3 km)
+      // 1. Encontrar farmacias cercanas (radio 5 km)
       nearbyPharmacies = PHARMACIES
         .map(pharm => {
           const distance = calculateDistance(lat, lng, pharm.lat, pharm.lng);
           return { ...pharm, distance };
         })
-        .filter(p => p.distance <= 3)
+        .filter(p => p.distance <= 5)
         .sort((a, b) => a.distance - b.distance);
       
       // 2. Encontrar zonas cercanas
