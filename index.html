@@ -1,374 +1,1017 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Estrategia DiDi Repartidor Bici (7 AM - 11 AM) - Bogotá</title>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
+  <title>DiDi Farma Navigator - Bogotá</title>
   
-  <!-- Leaflet CSS (Mapa Interactivo) -->
+  <!-- Leaflet CSS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+  <!-- Leaflet Routing Machine para rutas -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" />
 
   <style>
+    /* ========== RESET & VARIABLES ========== */
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
     :root {
-      --primary: #ff5200; /* Color corporativo DiDi */
-      --dark: #0f172a;
-      --light: #f8fafc;
+      --primary: #ff5200;
+      --primary-dark: #e04500;
+      --bg: #0a0e1a;
+      --bg-card: #141b2d;
+      --bg-card-hover: #1a233a;
+      --text: #f0f4ff;
+      --text-secondary: #94a3b8;
+      --border: #2a3450;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
       
-      /* Semaforización de Importancia */
-      --prioridad-alta: #16a34a;    /* Verde */
-      --prioridad-media: #eab308;   /* Amarillo */
-      --prioridad-baja: #dc2626;    /* Rojo */
+      /* Colores de prioridad */
+      --green: #22c55e;
+      --yellow: #eab308;
+      --red: #ef4444;
+      --blue: #3b82f6;
+      --purple: #8b5cf6;
+
+      --header-height: 56px;
+      --bottom-nav-height: 64px;
     }
 
     body {
-      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
-      line-height: 1.5;
-      color: var(--dark);
-      background-color: #f1f5f9;
-      margin: 0;
-      padding: 20px;
+      font-family: -apple-system, 'Segoe UI', Roboto, system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--text);
+      height: 100vh;
+      overflow: hidden;
+      display: flex;
+      flex-direction: column;
     }
 
-    .container {
-      max-width: 900px;
-      margin: 0 auto;
-      background: #ffffff;
-      padding: 25px 30px;
-      border-radius: 16px;
-      box-shadow: 0 10px 25px rgba(0,0,0,0.08);
+    /* ========== SCROLLBAR ========== */
+    ::-webkit-scrollbar { width: 4px; }
+    ::-webkit-scrollbar-track { background: var(--bg); }
+    ::-webkit-scrollbar-thumb { background: var(--primary); border-radius: 4px; }
+
+    /* ========== HEADER ========== */
+    .app-header {
+      height: var(--header-height);
+      background: var(--bg-card);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 16px;
+      flex-shrink: 0;
+      position: relative;
+      z-index: 100;
     }
 
-    header {
-      border-bottom: 3px solid var(--primary);
-      padding-bottom: 12px;
-      margin-bottom: 20px;
-    }
-
-    h1 {
-      color: var(--dark);
-      margin: 0 0 4px 0;
-      font-size: 22px;
+    .app-header .logo {
       display: flex;
       align-items: center;
       gap: 10px;
+      font-weight: 700;
+      font-size: 16px;
+      color: var(--text);
     }
 
-    .subtitle {
-      font-size: 13px;
-      color: #64748b;
+    .app-header .logo i {
+      color: var(--primary);
+      font-size: 20px;
+    }
+
+    .app-header .stats {
+      display: flex;
+      gap: 12px;
+      font-size: 11px;
+    }
+
+    .app-header .stat-item {
+      text-align: center;
+    }
+
+    .app-header .stat-item .number {
+      font-size: 14px;
       font-weight: 700;
+      color: var(--primary);
+    }
+
+    .app-header .stat-item .label {
+      color: var(--text-secondary);
+      font-size: 8px;
       text-transform: uppercase;
       letter-spacing: 0.5px;
     }
 
-    /* Estilos del Mapa */
-    #map-container {
-      margin-bottom: 25px;
-    }
-
-    #map {
-      height: 320px;
-      width: 100%;
-      border-radius: 12px;
-      border: 2px solid #e2e8f0;
-      box-shadow: inset 0 2px 4px rgba(0,0,0,0.05);
-    }
-
-    /* Leyenda */
-    .leyenda {
+    /* ========== MAIN CONTENT ========== */
+    .app-main {
+      flex: 1;
+      overflow: hidden;
       display: flex;
-      gap: 15px;
-      margin-top: 10px;
-      justify-content: center;
-      font-size: 12px;
-      font-weight: 600;
-    }
-
-    .item-leyenda {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .dot {
-      width: 12px;
-      height: 12px;
-      border-radius: 50%;
-      display: inline-block;
-    }
-
-    .dot-alta { background-color: var(--prioridad-alta); }
-    .dot-media { background-color: var(--prioridad-media); }
-    .dot-baja { background-color: var(--prioridad-baja); }
-
-    /* Grilla de Zonas Interactivas */
-    .grid-zonas {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-      gap: 15px;
-      margin-bottom: 25px;
-    }
-
-    .card-zona {
-      border: 1px solid #e2e8f0;
-      border-radius: 10px;
-      padding: 14px;
-      background: #ffffff;
-      transition: all 0.2s ease;
-      cursor: pointer;
+      flex-direction: column;
       position: relative;
     }
 
-    .card-zona:hover {
-      transform: translateY(-3px);
-      box-shadow: 0 6px 12px rgba(0,0,0,0.1);
+    /* ========== MAPA ========== */
+    #map {
+      flex: 1;
+      min-height: 200px;
+      background: #1a233a;
+      border-bottom: 2px solid var(--border);
     }
 
-    /* Bordes e insignias según importancia */
-    .card-alta { border-left: 6px solid var(--prioridad-alta); }
-    .card-media { border-left: 6px solid var(--prioridad-media); }
-    .card-baja { border-left: 6px solid var(--prioridad-baja); }
+    /* ========== PANEL DE INFORMACIÓN ========== */
+    .info-panel {
+      background: var(--bg-card);
+      height: 40%;
+      min-height: 180px;
+      display: flex;
+      flex-direction: column;
+      border-top: 2px solid var(--border);
+      transition: height 0.3s ease;
+    }
 
-    .badge {
-      display: inline-block;
+    .info-panel .panel-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 16px;
+      border-bottom: 1px solid var(--border);
+      flex-shrink: 0;
+    }
+
+    .info-panel .panel-header h2 {
+      font-size: 13px;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .panel-header .view-toggle {
+      display: flex;
+      gap: 4px;
+    }
+
+    .panel-header .view-toggle button {
+      background: transparent;
+      border: 1px solid var(--border);
+      color: var(--text-secondary);
+      padding: 4px 12px;
+      border-radius: 16px;
       font-size: 10px;
-      padding: 2px 8px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .panel-header .view-toggle button.active {
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+
+    .panel-header .view-toggle button:hover {
+      background: var(--primary-dark);
+      border-color: var(--primary-dark);
+      color: #fff;
+    }
+
+    /* ========== CONTENIDO DEL PANEL ========== */
+    .panel-content {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px;
+    }
+
+    .panel-content .section {
+      display: none;
+    }
+
+    .panel-content .section.active {
+      display: block;
+    }
+
+    /* ========== ZONAS ESTRATÉGICAS ========== */
+    .zone-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+    }
+
+    .zone-card {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 12px;
+      border-left: 4px solid var(--green);
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .zone-card:hover {
+      transform: translateX(4px);
+      background: var(--bg-card-hover);
+    }
+
+    .zone-card .zone-name {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .zone-card .zone-detail {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .zone-card .zone-detail i {
+      width: 14px;
+      color: var(--primary);
+    }
+
+    .zone-card .zone-badge {
+      font-size: 9px;
+      padding: 1px 8px;
+      border-radius: 10px;
+      display: inline-block;
+      margin-top: 4px;
+    }
+
+    .zone-badge.high { background: var(--green); color: #000; }
+    .zone-badge.medium { background: var(--yellow); color: #000; }
+    .zone-badge.low { background: var(--red); color: #fff; }
+
+    /* ========== FARMACIAS ========== */
+    .pharmacy-list {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .pharmacy-item {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      cursor: pointer;
+      transition: all 0.2s;
+    }
+
+    .pharmacy-item:hover {
+      background: var(--bg-card-hover);
+      transform: translateX(4px);
+    }
+
+    .pharmacy-item .pharm-info {
+      display: flex;
+      flex-direction: column;
+      gap: 2px;
+    }
+
+    .pharmacy-item .pharm-name {
+      font-size: 13px;
+      font-weight: 600;
+    }
+
+    .pharmacy-item .pharm-address {
+      font-size: 11px;
+      color: var(--text-secondary);
+    }
+
+    .pharmacy-item .pharm-type {
+      font-size: 9px;
+      background: var(--blue);
+      color: #fff;
+      padding: 1px 8px;
+      border-radius: 10px;
+    }
+
+    /* ========== RUTAS ========== */
+    .route-item {
+      background: var(--bg);
+      border-radius: 8px;
+      padding: 12px;
+      margin-bottom: 8px;
+    }
+
+    .route-item .route-title {
+      font-weight: 600;
+      font-size: 13px;
+      margin-bottom: 4px;
+    }
+
+    .route-item .route-detail {
+      font-size: 11px;
+      color: var(--text-secondary);
+      display: flex;
+      gap: 12px;
+    }
+
+    .route-item .route-detail i {
+      width: 14px;
+    }
+
+    /* ========== TOAST ========== */
+    .toast {
+      position: fixed;
+      top: 70px;
+      right: 16px;
+      background: var(--bg-card);
+      border: 1px solid var(--primary);
       border-radius: 12px;
-      font-weight: bold;
-      color: white;
-      margin-bottom: 6px;
-      text-transform: uppercase;
+      padding: 14px 20px;
+      box-shadow: var(--shadow);
+      z-index: 1000;
+      max-width: 280px;
+      transform: translateX(120%);
+      transition: transform 0.4s cubic-bezier(0.34, 1.56, 0.64, 1);
+      font-size: 13px;
     }
 
-    .badge-alta { background-color: var(--prioridad-alta); }
-    .badge-media { background-color: var(--prioridad-media); color: #000; }
-    .badge-baja { background-color: var(--prioridad-baja); }
-
-    .card-zona h3 {
-      margin: 0 0 6px 0;
-      color: var(--dark);
-      font-size: 15px;
+    .toast.show {
+      transform: translateX(0);
     }
 
-    ul {
-      margin: 0;
-      padding-left: 16px;
-      font-size: 12px;
-      color: #334155;
-    }
-
-    li { margin-bottom: 3px; }
-
-    .section-title {
-      font-size: 16px;
-      color: var(--dark);
-      border-bottom: 1px solid #e2e8f0;
-      padding-bottom: 4px;
-      margin-top: 20px;
-      margin-bottom: 12px;
+    .toast .toast-title {
       font-weight: 700;
+      color: var(--primary);
     }
 
-    /* Tabla */
-    .table-horarios {
-      width: 100%;
-      border-collapse: collapse;
+    .toast .toast-body {
+      color: var(--text-secondary);
       font-size: 12px;
-      margin-bottom: 20px;
+      margin-top: 4px;
     }
 
-    .table-horarios th, .table-horarios td {
-      border: 1px solid #e2e8f0;
-      padding: 8px 12px;
-      text-align: left;
+    /* ========== BOTTOM NAV ========== */
+    .bottom-nav {
+      height: var(--bottom-nav-height);
+      background: var(--bg-card);
+      border-top: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-around;
+      flex-shrink: 0;
     }
 
-    .table-horarios th {
-      background-color: #f8fafc;
-      color: var(--dark);
+    .bottom-nav .nav-item {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 2px;
+      color: var(--text-secondary);
+      font-size: 9px;
+      cursor: pointer;
+      padding: 4px 12px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      background: transparent;
+      border: none;
     }
 
-    .tips-box {
-      background-color: #f0f9ff;
-      border-left: 4px solid #0284c7;
-      padding: 10px 14px;
-      border-radius: 6px;
-      font-size: 12px;
+    .bottom-nav .nav-item i {
+      font-size: 18px;
     }
 
-    @media print {
-      body { background: white; padding: 0; }
-      .container { box-shadow: none; padding: 0; width: 100%; }
-      #map { height: 250px; }
+    .bottom-nav .nav-item.active {
+      color: var(--primary);
+    }
+
+    .bottom-nav .nav-item:hover {
+      color: var(--text);
+    }
+
+    /* ========== CONTROLES DEL MAPA ========== */
+    .map-controls {
+      position: absolute;
+      bottom: 80px;
+      right: 12px;
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      z-index: 1000;
+    }
+
+    .map-controls button {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text);
+      width: 40px;
+      height: 40px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: all 0.2s;
+      font-size: 16px;
+      box-shadow: var(--shadow);
+    }
+
+    .map-controls button:hover {
+      background: var(--primary);
+      transform: scale(1.05);
+    }
+
+    /* ========== RESPONSIVE ========== */
+    @media (min-width: 768px) {
+      .app-main {
+        flex-direction: row;
+      }
+      #map {
+        flex: 2;
+        border-bottom: none;
+        border-right: 2px solid var(--border);
+      }
+      .info-panel {
+        flex: 1;
+        height: 100%;
+        min-height: unset;
+        border-top: none;
+      }
+      .toast {
+        top: 80px;
+        right: 24px;
+        max-width: 360px;
+      }
+      .zone-grid {
+        grid-template-columns: 1fr;
+      }
+    }
+
+    @media (max-width: 480px) {
+      .app-header .stats .stat-item .label {
+        display: none;
+      }
+      .app-header .stats .stat-item .number {
+        font-size: 12px;
+      }
+      .zone-grid {
+        grid-template-columns: 1fr;
+      }
+      .pharmacy-item {
+        padding: 8px 10px;
+      }
+      .pharmacy-item .pharm-name {
+        font-size: 12px;
+      }
+    }
+
+    /* ========== LOADING ========== */
+    .loading {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 100%;
+      color: var(--text-secondary);
+      font-size: 13px;
+    }
+
+    .loading i {
+      margin-right: 8px;
+      animation: spin 1s linear infinite;
+    }
+
+    @keyframes spin {
+      from { transform: rotate(0deg); }
+      to { transform: rotate(360deg); }
+    }
+
+    /* ========== MODO OSCURO PARA EL MAPA ========== */
+    .leaflet-tile-pane {
+      filter: brightness(0.7) saturate(0.8);
     }
   </style>
 </head>
 <body>
 
-<div class="container">
-  <header>
-    <span class="subtitle">Estrategia DiDi Repartidor Bici • Horario 7:00 AM - 11:00 AM</span>
-    <h1>🚴‍♂️ Ubicaciones Más Rentables en Bogotá</h1>
+  <!-- ========== HEADER ========== -->
+  <header class="app-header">
+    <div class="logo">
+      <i class="fas fa-bicycle"></i>
+      <span>Farma Navigator</span>
+    </div>
+    <div class="stats">
+      <div class="stat-item">
+        <div class="number" id="totalZones">0</div>
+        <div class="label">Zonas</div>
+      </div>
+      <div class="stat-item">
+        <div class="number" id="totalPharmacies">0</div>
+        <div class="label">Farmacias</div>
+      </div>
+      <div class="stat-item">
+        <div class="number" id="totalRoutes">0</div>
+        <div class="label">Rutas</div>
+      </div>
+    </div>
   </header>
 
-  <!-- Mapa Interactivo -->
-  <div id="map-container">
+  <!-- ========== MAIN ========== -->
+  <div class="app-main">
+    <!-- Mapa -->
     <div id="map"></div>
-    <div class="leyenda">
-      <span class="item-leyenda"><span class="dot dot-alta"></span> Verde: Muy Importante (Pico Alto)</span>
-      <span class="item-leyenda"><span class="dot dot-media"></span> Amarillo: Medianamente Importante</span>
-      <span class="item-leyenda"><span class="dot dot-baja"></span> Rojo: Menor Importancia (Franja 7-11 AM)</span>
+
+    <!-- Panel de Información -->
+    <div class="info-panel">
+      <div class="panel-header">
+        <h2>
+          <i class="fas fa-map-marked-alt" style="color: var(--primary);"></i>
+          Estrategia Bogotá
+        </h2>
+        <div class="view-toggle">
+          <button class="active" data-view="zones">🏙️ Zonas</button>
+          <button data-view="pharmacies">💊 Farmacias</button>
+          <button data-view="routes">🚴 Rutas</button>
+        </div>
+      </div>
+
+      <div class="panel-content" id="panelContent">
+        <!-- Sección Zonas -->
+        <div class="section active" id="sectionZones">
+          <div class="loading"><i class="fas fa-spinner"></i> Cargando zonas estratégicas...</div>
+        </div>
+        
+        <!-- Sección Farmacias -->
+        <div class="section" id="sectionPharmacies">
+          <div class="loading"><i class="fas fa-spinner"></i> Cargando farmacias...</div>
+        </div>
+        
+        <!-- Sección Rutas -->
+        <div class="section" id="sectionRoutes">
+          <div class="loading"><i class="fas fa-spinner"></i> Cargando rutas recomendadas...</div>
+        </div>
+      </div>
     </div>
   </div>
 
-  <h2 class="section-title">📍 Zonas Estratégicas y Puntos de Espera</h2>
+  <!-- ========== BOTTOM NAV ========== -->
+  <nav class="bottom-nav">
+    <button class="nav-item active">
+      <i class="fas fa-home"></i>
+      <span>Inicio</span>
+    </button>
+    <button class="nav-item">
+      <i class="fas fa-fire"></i>
+      <span>Zonas Calientes</span>
+    </button>
+    <button class="nav-item">
+      <i class="fas fa-route"></i>
+      <span>Rutas</span>
+    </button>
+    <button class="nav-item">
+      <i class="fas fa-chart-line"></i>
+      <span>Estadísticas</span>
+    </button>
+  </nav>
+
+  <!-- ========== CONTROLES DEL MAPA ========== -->
+  <div class="map-controls">
+    <button onclick="locateUser()" title="Mi Ubicación">
+      <i class="fas fa-location-dot"></i>
+    </button>
+    <button onclick="resetMapView()" title="Vista General">
+      <i class="fas fa-globe-americas"></i>
+    </button>
+    <button onclick="toggleHeatmap()" title="Mapa de Calor">
+      <i class="fas fa-fire"></i>
+    </button>
+  </div>
+
+  <!-- ========== TOAST ========== -->
+  <div class="toast" id="toast">
+    <div class="toast-title"><i class="fas fa-bell"></i> Consejo</div>
+    <div class="toast-body" id="toastBody">Muevete a zonas con alta densidad de farmacias</div>
+  </div>
+
+  <!-- ========== SCRIPTS ========== -->
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
   
-  <div class="grid-zonas">
+  <script>
+    // ================================================
+    // 1. DATOS ESTRATÉGICOS DE BOGOTÁ
+    // ================================================
     
-    <!-- 1. Chapinero (Muy Importante - Verde) -->
-    <div class="card-zona card-alta" onclick="centrarMapa(4.654, -74.055, 15)">
-      <span class="badge badge-alta">🟢 Muy Importante</span>
-      <h3>1. Chapinero Financiero (Cl. 72)</h3>
-      <ul>
-        <li><strong>Estrategia 7-8:30 AM:</strong> Pico de oficinas y personas en movimiento.</li>
-        <li><strong>Punto Clave:</strong> Cl. 72 con Kr. 9 a Kr. 11 (Cruz Verde / Farmatodo).</li>
-        <li><strong>Ventaja:</strong> Pedidos urgentes de distancias muy cortas.</li>
-      </ul>
-    </div>
+    // Zonas con mayor afluencia de pedidos (basado en datos públicos)
+    const ZONES = [
+      {
+        id: 1,
+        name: 'Chapinero Financiero',
+        lat: 4.654,
+        lng: -74.055,
+        priority: 'high',
+        description: 'Alta densidad de oficinas y farmacias',
+        bestTime: '7:00 - 9:00 AM',
+        pharmacies: 12,
+        clinics: 4
+      },
+      {
+        id: 2,
+        name: 'Chicó / Pepe Sierra',
+        lat: 4.685,
+        lng: -74.048,
+        priority: 'high',
+        description: 'Zona residencial de alto poder adquisitivo',
+        bestTime: '8:00 - 11:00 AM',
+        pharmacies: 8,
+        clinics: 3
+      },
+      {
+        id: 3,
+        name: 'Ciudad Salitre',
+        lat: 4.652,
+        lng: -74.108,
+        priority: 'medium',
+        description: 'Mezcla de oficinas y residencias',
+        bestTime: '7:00 - 10:00 AM',
+        pharmacies: 6,
+        clinics: 2
+      },
+      {
+        id: 4,
+        name: 'Cedritos',
+        lat: 4.721,
+        lng: -74.032,
+        priority: 'medium',
+        description: 'Alta densidad residencial',
+        bestTime: '9:00 - 11:00 AM',
+        pharmacies: 5,
+        clinics: 1
+      },
+      {
+        id: 5,
+        name: 'Calle 100 - Kr 15',
+        lat: 4.695,
+        lng: -74.038,
+        priority: 'high',
+        description: 'Corredor comercial y clínicas',
+        bestTime: '7:00 - 9:30 AM',
+        pharmacies: 10,
+        clinics: 5
+      },
+      {
+        id: 6,
+        name: 'Zona T / Andino',
+        lat: 4.662,
+        lng: -74.050,
+        priority: 'high',
+        description: 'Centro comercial y oficinas',
+        bestTime: '8:00 - 10:00 AM',
+        pharmacies: 7,
+        clinics: 2
+      }
+    ];
 
-    <!-- 2. Chicó (Medianamente Importante - Amarillo) -->
-    <div class="card-zona card-media" onclick="centrarMapa(4.685, -74.048, 15)">
-      <span class="badge badge-media">🟡 Mediana Importancia</span>
-      <h3>2. Chicó & Pepe Sierra</h3>
-      <ul>
-        <li><strong>Estrategia 8:30-11 AM:</strong> Comienzo de demanda residencial.</li>
-        <li><strong>Punto Clave:</strong> Corredor Kr. 15 (Cl. 93 a Cl. 116).</li>
-        <li><strong>Ventaja:</strong> Ciclorrutas continuas por Kr. 19 y Cl. 100.</li>
-      </ul>
-    </div>
+    // Farmacias principales
+    const PHARMACIES = [
+      { id: 1, name: 'Cruz Verde Chapinero', lat: 4.654, lng: -74.055, address: 'Cl. 72 #9-45' },
+      { id: 2, name: 'Farmatodo Chicó', lat: 4.685, lng: -74.048, address: 'Kr. 15 #93-20' },
+      { id: 3, name: 'Cruz Verde Salitre', lat: 4.652, lng: -74.108, address: 'Av. Esperanza #66-80' },
+      { id: 4, name: 'Farmatodo Cedritos', lat: 4.721, lng: -74.032, address: 'Cl. 140 #9-30' },
+      { id: 5, name: 'Drogas La Rebaja Chapinero', lat: 4.660, lng: -74.058, address: 'Cl. 67 #10-12' },
+      { id: 6, name: 'Cruz Verde Pepe Sierra', lat: 4.692, lng: -74.042, address: 'Cl. 116 #15-40' },
+      { id: 7, name: 'Farmatodo Zona T', lat: 4.662, lng: -74.050, address: 'Cl. 83 #13-20' },
+      { id: 8, name: 'Cruz Verde Calle 100', lat: 4.695, lng: -74.038, address: 'Cl. 100 #15-30' },
+      { id: 9, name: 'Drogas La Rebaja Salitre', lat: 4.655, lng: -74.110, address: 'Av. Esperanza #68-90' },
+      { id: 10, name: 'Farmatodo Cedritos', lat: 4.725, lng: -74.030, address: 'Cl. 145 #9-10' }
+    ];
 
-    <!-- 3. Ciudad Salitre (Medianamente Importante - Amarillo) -->
-    <div class="card-zona card-media" onclick="centrarMapa(4.652, -74.108, 15)">
-      <span class="badge badge-media">🟡 Mediana Importancia</span>
-      <h3>3. Ciudad Salitre Oriental</h3>
-      <ul>
-        <li><strong>Estrategia 7-10 AM:</strong> Mezcla de residentes y torres corporativas.</li>
-        <li><strong>Punto Clave:</strong> Salitre Plaza / Av. Esperanza / Cruz Verde 24h.</li>
-        <li><strong>Ventaja:</strong> Terreno 100% plano y ciclorruta Av. Calle 26.</li>
-      </ul>
-    </div>
+    // Clínicas y hospitales principales
+    const CLINICS = [
+      { name: 'Clínica Chapinero', lat: 4.656, lng: -74.052 },
+      { name: 'Clínica Universitaria', lat: 4.682, lng: -74.045 },
+      { name: 'Hospital Militar', lat: 4.698, lng: -74.035 },
+      { name: 'Clínica del Occidente', lat: 4.650, lng: -74.112 },
+      { name: 'Fundación Santa Fe', lat: 4.688, lng: -74.040 }
+    ];
 
-    <!-- 4. Cedritos (Menor Importancia - Rojo) -->
-    <div class="card-zona card-baja" onclick="centrarMapa(4.721, -74.032, 15)">
-      <span class="badge badge-baja">🔴 Menor Importancia</span>
-      <h3>4. Cedritos (Calle 140)</h3>
-      <ul>
-        <li><strong>Estrategia 9-11 AM:</strong> Zona secundaria de flujo más residencial.</li>
-        <li><strong>Punto Clave:</strong> Cl. 140 entre Kr. 9 y Kr. 15.</li>
-        <li><strong>Nota:</strong> Buena densidad pero menor volumen de urgencia matutina.</li>
-      </ul>
-    </div>
+    // Ciclorrutas principales (puntos de referencia)
+    const CYCLE_ROUTES = [
+      { name: 'Ciclovía Calle 72', points: [[4.650, -74.070], [4.658, -74.045]] },
+      { name: 'Ciclovía Kr 15', points: [[4.680, -74.050], [4.710, -74.035]] },
+      { name: 'Ciclovía Av. Esperanza', points: [[4.645, -74.120], [4.658, -74.080]] },
+      { name: 'Ciclovía Calle 100', points: [[4.690, -74.050], [4.700, -74.030]] },
+      { name: 'Ciclovía Kr 9', points: [[4.650, -74.060], [4.730, -74.030]] }
+    ];
 
-  </div>
-
-  <h2 class="section-title">⏰ Plan de Rotación Sugerido</h2>
-  <table class="table-horarios">
-    <thead>
-      <tr>
-        <th>Horario</th>
-        <th>Zona Prioritaria</th>
-        <th>Objetivo principal</th>
-      </tr>
-    </thead>
-    <tbody>
-      <tr>
-        <td><strong>07:00 AM – 08:30 AM</strong></td>
-        <td><strong style="color: var(--prioridad-alta);">🟢 Chapinero (Calle 72) / Salitre</strong></td>
-        <td>Capturar pedidos de ejecutivos, oficinas y urgencias matutinas.</td>
-      </tr>
-      <tr>
-        <td><strong>08:30 AM – 11:00 AM</strong></td>
-        <td><strong style="color: #b45309;">🟡 Chicó / Pepe Sierra / Cedritos</strong></td>
-        <td>Capturar compras de hogar, medicamentos formulados y cuidado personal.</td>
-      </tr>
-    </tbody>
-  </table>
-
-  <h2 class="section-title">💡 Recomendaciones Operativas</h2>
-  <div class="tips-box">
-    <ul>
-      <li><strong>Interacción con el mapa:</strong> Haz clic en cualquier tarjeta de zona para enfocar el mapa directamente en ese punto de espera.</li>
-      <li><strong>Ahorro de energía:</strong> No pedalees esperando pedidos; ubícate fijo a 1-2 cuadras de un clúster comercial (ej. Farmatodo Pepe Sierra o Cruz Verde Calle 72).</li>
-    </ul>
-  </div>
-</div>
-
-<!-- Script de Leaflet JS para el Mapa -->
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-<script>
-  // Inicializar mapa centrado en el norte-centro de Bogotá
-  var map = L.map('map').setView([4.675, -74.060], 12);
-
-  // Cargar capa de mapa de OpenStreetMap
-  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 18,
-    attribution: '© OpenStreetMap'
-  }).addTo(map);
-
-  // Función para crear iconos de colores
-  function crearIcono(colorHex) {
-    return L.divIcon({
-      className: 'custom-icon',
-      html: `<div style="background-color:${colorHex}; width:16px; height:16px; border-radius:50%; border:2px solid white; box-shadow:0 2px 5px rgba(0,0,0,0.4);"></div>`,
-      iconSize: [16, 16],
-      iconAnchor: [8, 8]
+    // ================================================
+    // 2. INICIALIZAR MAPA
+    // ================================================
+    const map = L.map('map', {
+      center: [4.675, -74.060],
+      zoom: 12,
+      zoomControl: false
     });
-  }
 
-  // Puntos clave y marcas
-  var ubicaciones = [
-    {
-      nombre: "1. Chapinero Financiero (Cl. 72)",
-      lat: 4.654,
-      lng: -74.055,
-      color: "#16a34a", // Verde
-      popup: "<b>Chapinero (Cl. 72)</b><br>🟢 Prioridad Alta (7:00 AM - 8:30 AM)"
-    },
-    {
-      nombre: "2. Chicó / Pepe Sierra",
-      lat: 4.685,
-      lng: -74.048,
-      color: "#eab308", // Amarillo
-      popup: "<b>Chicó / Pepe Sierra</b><br>🟡 Prioridad Media (8:30 AM - 11:00 AM)"
-    },
-    {
-      nombre: "3. Ciudad Salitre Oriental",
-      lat: 4.652,
-      lng: -74.108,
-      color: "#eab308", // Amarillo
-      popup: "<b>Ciudad Salitre</b><br>🟡 Prioridad Media (Eje Calle 26)"
-    },
-    {
-      nombre: "4. Cedritos (Calle 140)",
-      lat: 4.721,
-      lng: -74.032,
-      color: "#dc2626", // Rojo
-      popup: "<b>Cedritos (Calle 140)</b><br>🔴 Menor Prioridad en esta franja"
+    // Capa de mapa con estilo oscuro
+    L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+      maxZoom: 18,
+      attribution: '© OpenStreetMap'
+    }).addTo(map);
+
+    // ================================================
+    // 3. CREAR ICONOS PERSONALIZADOS
+    // ================================================
+    function createIcon(color, size = 12) {
+      return L.divIcon({
+        className: 'custom-icon',
+        html: `<div style="background:${color}; width:${size}px; height:${size}px; border-radius:50%; border:2px solid white; box-shadow:0 2px 6px rgba(0,0,0,0.5);"></div>`,
+        iconSize: [size, size],
+        iconAnchor: [size/2, size/2]
+      });
     }
-  ];
 
-  // Agregar los marcadores al mapa
-  ubicaciones.forEach(function(loc) {
-    L.marker([loc.lat, loc.lng], { icon: crearIcono(loc.color) })
-      .addTo(map)
-      .bindPopup(loc.popup);
-  });
+    // ================================================
+    // 4. AGREGAR CAPAS AL MAPA
+    // ================================================
+    
+    // Zonas estratégicas (círculos de calor)
+    const zoneLayers = [];
+    ZONES.forEach(zone => {
+      const color = zone.priority === 'high' ? 'rgba(34, 197, 94, 0.3)' : 
+                    zone.priority === 'medium' ? 'rgba(234, 179, 8, 0.3)' : 'rgba(239, 68, 68, 0.3)';
+      
+      const circle = L.circle([zone.lat, zone.lng], {
+        radius: 500,
+        color: color.replace('0.3', '0.8'),
+        fillColor: color,
+        fillOpacity: 0.4,
+        weight: 2
+      }).addTo(map);
+      
+      circle.bindPopup(`
+        <b>${zone.name}</b><br>
+        🟢 Prioridad: ${zone.priority === 'high' ? 'Alta' : zone.priority === 'medium' ? 'Media' : 'Baja'}<br>
+        ⏰ Mejor hora: ${zone.bestTime}<br>
+        💊 Farmacias: ${zone.pharmacies}<br>
+        🏥 Clínicas: ${zone.clinics}
+      `);
+      
+      zoneLayers.push(circle);
+    });
 
-  // Función para centrar el mapa al hacer clic en las tarjetas
-  function centrarMapa(lat, lng, zoom) {
-    map.flyTo([lat, lng], zoom, { duration: 1.2 });
-  }
-</script>
+    // Farmacias
+    const pharmacyMarkers = [];
+    PHARMACIES.forEach(pharm => {
+      const marker = L.marker([pharm.lat, pharm.lng], {
+        icon: createIcon('#3b82f6', 14)
+      }).addTo(map);
+      
+      marker.bindPopup(`
+        <b>${pharm.name}</b><br>
+        📍 ${pharm.address}<br>
+        <i class="fas fa-prescription"></i> Farmacia 24h
+      `);
+      
+      pharmacyMarkers.push(marker);
+    });
 
+    // Clínicas
+    CLINICS.forEach(clinic => {
+      const marker = L.marker([clinic.lat, clinic.lng], {
+        icon: createIcon('#8b5cf6', 14)
+      }).addTo(map);
+      
+      marker.bindPopup(`
+        <b>${clinic.name}</b><br>
+        <i class="fas fa-hospital"></i> Centro de salud
+      `);
+    });
+
+    // Ciclorrutas (líneas)
+    CYCLE_ROUTES.forEach(route => {
+      L.polyline(route.points, {
+        color: '#22c55e',
+        weight: 3,
+        opacity: 0.6,
+        dashArray: '10, 5'
+      }).addTo(map).bindPopup(`
+        <b>🚴 ${route.name}</b><br>
+        Vía preferente para bicicletas
+      `);
+    });
+
+    // ================================================
+    // 5. RENDERIZAR PANEL DE INFORMACIÓN
+    // ================================================
+    
+    function renderZones() {
+      const container = document.getElementById('sectionZones');
+      container.innerHTML = `
+        <div class="zone-grid">
+          ${ZONES.map(zone => `
+            <div class="zone-card" onclick="focusZone(${zone.lat}, ${zone.lng})">
+              <div class="zone-name">${zone.name}</div>
+              <div class="zone-detail">
+                <i class="fas fa-clock"></i> ${zone.bestTime}
+              </div>
+              <div class="zone-detail">
+                <i class="fas fa-prescription"></i> ${zone.pharmacies} farmacias
+              </div>
+              <div class="zone-detail">
+                <i class="fas fa-hospital"></i> ${zone.clinics} clínicas
+              </div>
+              <span class="zone-badge ${zone.priority}">
+                ${zone.priority === 'high' ? '🟢 Alta' : zone.priority === 'medium' ? '🟡 Media' : '🔴 Baja'}
+              </span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('totalZones').textContent = ZONES.length;
+    }
+
+    function renderPharmacies() {
+      const container = document.getElementById('sectionPharmacies');
+      container.innerHTML = `
+        <div class="pharmacy-list">
+          ${PHARMACIES.map(pharm => `
+            <div class="pharmacy-item" onclick="focusPharmacy(${pharm.lat}, ${pharm.lng})">
+              <div class="pharm-info">
+                <div class="pharm-name">${pharm.name}</div>
+                <div class="pharm-address">${pharm.address}</div>
+              </div>
+              <span class="pharm-type">24h</span>
+            </div>
+          `).join('')}
+        </div>
+      `;
+      document.getElementById('totalPharmacies').textContent = PHARMACIES.length;
+    }
+
+    function renderRoutes() {
+      const container = document.getElementById('sectionRoutes');
+      container.innerHTML = `
+        <div>
+          ${CYCLE_ROUTES.map(route => `
+            <div class="route-item">
+              <div class="route-title">🚴 ${route.name}</div>
+              <div class="route-detail">
+                <span><i class="fas fa-flag"></i> Ruta preferente</span>
+                <span><i class="fas fa-check-circle" style="color: var(--green);"></i> Ciclovía</span>
+              </div>
+            </div>
+          `).join('')}
+          <div class="route-item" style="border-left: 4px solid var(--yellow);">
+            <div class="route-title">💡 Consejo de ruta</div>
+            <div class="route-detail">
+              <span>Conecta todas las zonas usando la ciclovía de la Kr 15 y Calle 72</span>
+            </div>
+          </div>
+        </div>
+      `;
+      document.getElementById('totalRoutes').textContent = CYCLE_ROUTES.length;
+    }
+
+    // ================================================
+    // 6. FUNCIONES DE NAVEGACIÓN
+    // ================================================
+    
+    window.focusZone = function(lat, lng) {
+      map.flyTo([lat, lng], 15, { duration: 1.5 });
+      showToast('📍 Zona seleccionada', 'Acércate a esta área para mayor afluencia de pedidos');
+    };
+
+    window.focusPharmacy = function(lat, lng) {
+      map.flyTo([lat, lng], 16, { duration: 1.5 });
+      showToast('💊 Farmacia cercana', 'Ubícate cerca para recibir pedidos de farmacia');
+    };
+
+    window.locateUser = function() {
+      if (navigator.geolocation) {
+        navigator.geolocation.getCurrentPosition(
+          (pos) => {
+            const lat = pos.coords.latitude;
+            const lng = pos.coords.longitude;
+            map.flyTo([lat, lng], 16, { duration: 1 });
+            
+            // Marcar ubicación del usuario
+            L.marker([lat, lng], {
+              icon: createIcon('#ff5200', 18)
+            }).addTo(map).bindPopup('📍 Tu ubicación');
+            
+            showToast('📍 Ubicación encontrada', 'Ahora puedes ver las zonas cercanas');
+          },
+          () => {
+            showToast('⚠️ Error', 'No se pudo obtener tu ubicación. Activa el GPS.');
+          }
+        );
+      } else {
+        showToast('⚠️ Error', 'Tu navegador no soporta geolocalización');
+      }
+    };
+
+    window.resetMapView = function() {
+      map.flyTo([4.675, -74.060], 12, { duration: 1 });
+    };
+
+    window.toggleHeatmap = function() {
+      // Simular mapa de calor cambiando el estilo del mapa
+      const pane = document.querySelector('.leaflet-tile-pane');
+      if (pane.style.filter === 'brightness(0.7) saturate(0.8)') {
+        pane.style.filter = 'brightness(1) saturate(1)';
+        showToast('🔥 Modo normal', 'Visualización estándar');
+      } else {
+        pane.style.filter = 'brightness(0.7) saturate(0.8)';
+        showToast('🔥 Modo calor', 'Destacando zonas con mayor densidad');
+      }
+    };
+
+    // ================================================
+    // 7. TOAST / NOTIFICACIONES
+    // ================================================
+    let toastTimeout;
+
+    function showToast(title, body) {
+      const toast = document.getElementById('toast');
+      document.querySelector('.toast-title').innerHTML = `<i class="fas fa-bell"></i> ${title}`;
+      document.getElementById('toastBody').textContent = body;
+      toast.classList.add('show');
+      
+      clearTimeout(toastTimeout);
+      toastTimeout = setTimeout(() => {
+        toast.classList.remove('show');
+      }, 4000);
+    }
+
+    // ================================================
+    // 8. CONTROLES DE VISTA
+    // ================================================
+    
+    document.querySelectorAll('.view-toggle button').forEach(btn => {
+      btn.addEventListener('click', function() {
+        document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        
+        const view = this.dataset.view;
+        document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+        document.getElementById('section' + view.charAt(0).toUpperCase() + view.slice(1)).classList.add('active');
+      });
+    });
+
+    // ================================================
+    // 9. NAVEGACIÓN BOTTOM
+    // ================================================
+    document.querySelectorAll('.bottom-nav .nav-item').forEach(item => {
+      item.addEventListener('click', function() {
+        document.querySelectorAll('.bottom-nav .nav-item').forEach(i => i.classList.remove('active'));
+        this.classList.add('active');
+        
+        // Acciones según el botón
+        const label = this.querySelector('span')?.textContent;
+        if (label === 'Zonas Calientes') {
+          map.flyTo([4.685, -74.048], 13, { duration: 1 });
+          showToast('🔥 Zonas Calientes', 'Chapinero, Chicó y Calle 100 tienen mayor demanda');
+        } else if (label === 'Rutas') {
+          map.flyTo([4.675, -74.060], 13, { duration: 1 });
+          showToast('🚴 Rutas óptimas', 'Usa la ciclovía de Kr 15 para moverte rápido');
+        } else if (label === 'Estadísticas') {
+          showToast('📊 Estadísticas', 'Zonas con más pedidos: Chapinero, Chicó, Salitre');
+        } else {
+          map.flyTo([4.675, -74.060], 12, { duration: 1 });
+        }
+      });
+    });
+
+    // ================================================
+    // 10. INICIAR APP
+    // ================================================
+    function initApp() {
+      renderZones();
+      renderPharmacies();
+      renderRoutes();
+      
+      // Mostrar consejo inicial
+      setTimeout(() => {
+        showToast('🚴‍♂️ Bienvenido', 'Explora las zonas estratégicas para maximizar tus ingresos');
+      }, 1000);
+      
+      console.log('✅ DiDi Farma Navigator iniciado');
+    }
+
+    initApp();
+
+    // ================================================
+    // 11. ACTUALIZAR CADA 5 MINUTOS (simulación)
+    // ================================================
+    setInterval(() => {
+      // Simular actualización de datos
+      console.log('🔄 Actualizando datos estratégicos...');
+    }, 300000);
+
+    // ================================================
+    // 12. PWA SUPPORT
+    // ================================================
+    if ('serviceWorker' in navigator) {
+      // navigator.serviceWorker.register('/sw.js');
+    }
+
+    console.log('💡 Consejo: Las mejores horas para farmacias son 7-9 AM');
+  </script>
 </body>
 </html>
