@@ -177,7 +177,37 @@
       border-color: var(--primary-dark);
       color: #fff;
     }
+/* Botón de Zonas Calientes con efecto pulsante */
+.map-controls button:nth-child(2) {
+  background: var(--primary);
+  border: 2px solid #ff6a2a;
+  animation: pulse-button 2s infinite;
+}
 
+@keyframes pulse-button {
+  0%, 100% {
+    box-shadow: 0 0 0 0 rgba(255, 82, 0, 0.4);
+  }
+  50% {
+    box-shadow: 0 0 0 10px rgba(255, 82, 0, 0);
+  }
+}
+
+/* Círculo pulsante en el mapa */
+.pulse-circle {
+  animation: pulse-map 1.5s ease-in-out infinite;
+}
+
+@keyframes pulse-map {
+  0%, 100% {
+    opacity: 1;
+    transform: scale(1);
+  }
+  50% {
+    opacity: 0.5;
+    transform: scale(1.5);
+  }
+}
     /* ========== CONTENIDO DEL PANEL ========== */
     .panel-content {
       flex: 1;
@@ -587,14 +617,21 @@
   <div class="map-controls">
     <button onclick="locateUser()" title="Mi Ubicación">
       <i class="fas fa-location-dot"></i>
-    </button>
-    <button onclick="resetMapView()" title="Vista General">
-      <i class="fas fa-globe-americas"></i>
-    </button>
-    <button onclick="toggleHeatmap()" title="Mapa de Calor">
-      <i class="fas fa-fire"></i>
-    </button>
-  </div>
+<!-- ========== CONTROLES DEL MAPA ========== -->
+<div class="map-controls">
+  <button onclick="locateUser()" title="Mi Ubicación" style="background: var(--bg-card); border: 2px solid var(--primary);">
+    <i class="fas fa-location-dot" style="color: var(--primary);"></i>
+  </button>
+  <button onclick="goToHotZones()" title="🔥 Zonas Calientes" style="background: var(--primary); border: 2px solid #ff6a2a;">
+    <i class="fas fa-fire" style="color: white;"></i>
+  </button>
+  <button onclick="resetMapView()" title="🌍 Vista General" style="background: var(--bg-card);">
+    <i class="fas fa-globe-americas" style="color: var(--text-secondary);"></i>
+  </button>
+  <button onclick="toggleHeatmap()" title="🔥 Mapa de Calor" style="background: var(--bg-card);">
+    <i class="fas fa-fire" style="color: var(--yellow);"></i>
+  </button>
+</div>
 
   <!-- ========== TOAST ========== -->
   <div class="toast" id="toast">
@@ -1165,47 +1202,49 @@ const CYCLE_ROUTES = [
     // 7. FUNCIÓN: UBICAR USUARIO Y GENERAR RECOMENDACIONES
     // ================================================
     
-    function locateUser() {
-      if (navigator.geolocation) {
-        // Mostrar loading
-        showToast('📍 Buscando ubicación...', 'Activando GPS');
+    window.locateUser = function() {
+  if (navigator.geolocation) {
+    showToast('📍 Buscando ubicación...', 'Activando GPS');
+    
+    navigator.geolocation.getCurrentPosition(
+      (pos) => {
+        const lat = pos.coords.latitude;
+        const lng = pos.coords.longitude;
+        userLocation = { lat, lng };
         
-        navigator.geolocation.getCurrentPosition(
-          (pos) => {
-            const lat = pos.coords.latitude;
-            const lng = pos.coords.longitude;
-            userLocation = { lat, lng };
-            
-            // Centrar mapa
-            map.flyTo([lat, lng], 15, { duration: 1.5 });
-            
-            // Marcar ubicación del usuario
-            if (userMarker) {
-              map.removeLayer(userMarker);
-            }
-            userMarker = L.marker([lat, lng], {
-              icon: createIcon('#ff5200', 20)
-            }).addTo(map);
-            userMarker.bindPopup('📍 Tu ubicación').openPopup();
-            
-            // Generar recomendaciones basadas en ubicación
-            generateRecommendations(lat, lng);
-            
-            showToast('📍 Ubicación encontrada', 'Generando recomendaciones personalizadas');
-          },
-          () => {
-            showToast('⚠️ Error', 'No se pudo obtener tu ubicación. Activa el GPS.');
-          },
-          {
-            enableHighAccuracy: true,
-            timeout: 10000,
-            maximumAge: 0
-          }
-        );
-      } else {
-        showToast('⚠️ Error', 'Tu navegador no soporta geolocalización');
+        // Centrar mapa suavemente (no forzado)
+        map.flyTo([lat, lng], 15, { duration: 1.5 });
+        
+        // Marcar ubicación del usuario
+        if (userMarker) {
+          map.removeLayer(userMarker);
+        }
+        userMarker = L.marker([lat, lng], {
+          icon: createIcon('#ff5200', 20)
+        }).addTo(map);
+        userMarker.bindPopup('📍 Tu ubicación').openPopup();
+        
+        // Generar recomendaciones personalizadas
+        generateRecommendations(lat, lng);
+        
+        // Cambiar título del panel
+        document.getElementById('panelTitle').textContent = '📍 Recomendaciones GPS';
+        
+        showToast('📍 Ubicación encontrada', 'Generando recomendaciones personalizadas');
+      },
+      () => {
+        showToast('⚠️ Error', 'No se pudo obtener tu ubicación. Activa el GPS.');
+      },
+      {
+        enableHighAccuracy: true,
+        timeout: 10000,
+        maximumAge: 0
       }
-    }
+    );
+  } else {
+    showToast('⚠️ Error', 'Tu navegador no soporta geolocalización');
+  }
+};
 
     // ================================================
     // 8. GENERAR RECOMENDACIONES PERSONALIZADAS
@@ -1435,6 +1474,77 @@ const CYCLE_ROUTES = [
         pane.style.filter = 'brightness(0.7) saturate(0.8)';
         showToast('🌙 Modo normal', 'Visualización estándar');
       }
+      // ================================================
+// NUEVA FUNCIÓN: IR A ZONAS CALIENTES
+// ================================================
+
+window.goToHotZones = function() {
+  // Centrar en la Zona T (punto principal)
+  map.flyTo([4.662, -74.050], 15, { duration: 1.5 });
+  
+  // Mostrar mensaje
+  showToast('🔥 Zonas Calientes', 'Zona T, Chapinero y Chicó - Mayor demanda');
+  
+  // Cambiar la vista del panel a "Zonas"
+  document.querySelectorAll('.view-toggle button').forEach(b => b.classList.remove('active'));
+  document.querySelector('[data-view="zones"]').classList.add('active');
+  document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+  document.getElementById('sectionZones').classList.add('active');
+  
+  // Restaurar la vista de zonas sin filtro de ubicación
+  renderZonesWithRecommendations([]);
+  renderPharmaciesWithDistances();
+  
+  // Actualizar título
+  document.getElementById('panelTitle').textContent = '🔥 Zonas Calientes';
+  
+  // Destacar las zonas premium en el mapa
+  highlightPremiumZones();
+};
+
+// ================================================
+// FUNCIÓN PARA DESTACAR ZONAS PREMIUM
+// ================================================
+
+function highlightPremiumZones() {
+  // Buscar y destacar zonas premium en el mapa
+  const premiumZones = ZONES.filter(z => z.priority === 'premium');
+  
+  premiumZones.forEach(zone => {
+    // Crear un círculo pulsante para cada zona premium
+    const pulseCircle = L.circle([zone.lat, zone.lng], {
+      radius: 300,
+      color: '#ff5200',
+      fillColor: '#ff5200',
+      fillOpacity: 0.2,
+      weight: 3,
+      className: 'pulse-circle'
+    }).addTo(map);
+    
+    // Eliminar después de 5 segundos para no saturar el mapa
+    setTimeout(() => {
+      map.removeLayer(pulseCircle);
+    }, 5000);
+  });
+}// ================================================
+// FUNCIÓN: ALTERNAR ENTRE VISTA GPS Y ZONAS CALIENTES
+// ================================================
+
+window.toggleView = function() {
+  const panelTitle = document.getElementById('panelTitle');
+  
+  if (panelTitle.textContent === '📍 Recomendaciones GPS') {
+    // Cambiar a Zonas Calientes
+    goToHotZones();
+  } else {
+    // Cambiar a GPS
+    if (userLocation) {
+      locateUser();
+    } else {
+      showToast('📍 Activa GPS', 'Presiona el botón de ubicación primero');
+    }
+  }
+};
     };
 
     // ================================================
